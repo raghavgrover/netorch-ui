@@ -1,0 +1,32 @@
+# netorch-ui configuration
+# Stored at /opt/netorch-ui/netorch-ui.toml
+
+[ui]
+# Port the web UI listens on
+port = 64322
+# Bind address — 0.0.0.0 to allow LAN access, 127.0.0.1 for localhost only
+host = "0.0.0.0"
+# Number of gunicorn gevent workers (1–2 is enough on a relay server)
+workers = 2
+# Set to true to enable Flask debug mode (development only)
+debug = false
+
+[netorch]
+# URL of the local netorch API
+api_url = "http://127.0.0.1:64321"
+# Auth token — must match auth_token in netorch.toml
+auth_token = "ab76f9ba6d712a6941e74eca990780a1d5d9a59d9f6f09b51506d258aacea636"
+# HTTP timeout for proxied requests (seconds)
+request_timeout = 60
+# Timeout for long-poll SSE job stream requests
+stream_timeout = 120
+
+[cache]
+# How long to cache inventory sources list (seconds)
+inventory_ttl = 30
+# How long to cache host list pages (seconds)
+hosts_ttl = 30
+# How long to cache group list (seconds)
+groups_ttl = 60
+# Max number of distinct cache entries (e.g. distinct search+filter combos)
+max_entries = 256

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BigFix Orchestrator for Network Devices</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<nav class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-mark">BF</div>
+        BigFix Orchestrator for Network Devices
+    </div>
+    <div class="sidebar-menu">
+        <div class="menu-section">Main</div>
+        <a class="menu-item" data-view="overview" href="/" onclick="Nav.go('overview',this);return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Dashboard
+        </a>
+        <a class="menu-item" data-view="inventory" href="/inventory" onclick="Nav.go('inventory',this);return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Inventory
+        </a>
+        <a class="menu-item" data-view="hosts" href="/hosts" onclick="Nav.go('hosts',this);return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            Hosts
+        </a>
+        <div class="menu-section">Operations</div>
+        <a class="menu-item" data-view="jobs" href="/jobs" onclick="Nav.go('jobs',this);return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Jobs
+        </a>
+        <a class="menu-item" data-view="newjob" href="/jobs/new" onclick="Nav.go('newjob',this);return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            New Job
+        </a>
+        <a class="menu-item" data-view="runbooks" href="/runbooks" onclick="Nav.go('runbooks',this);return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            Runbooks
+        </a>
+    </div>
+</nav>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<div class="main-wrapper">
+
+    <!-- Loader -->
+    <div id="loader" class="loader-overlay">
+        <svg class="spinner" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+            <line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/>
+        </svg>
+        <div style="font-size:15px; font-weight:600;">Loading…</div>
+    </div>
+
+    <!-- Topbar -->
+    <header class="topbar">
+        <button class="nav-arrow-btn" id="nav-back" onclick="Nav.back()" disabled title="Back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="nav-arrow-btn" id="nav-fwd" onclick="Nav.fwd()" disabled title="Forward">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <div style="flex:1"></div>
+        <span style="font-size:12px; color:var(--text-secondary);">
+            API:&nbsp;<span id="api-status-text" style="font-weight:600; color:var(--status-green);">Checking…</span>
+        </span>
+    </header>
+
+    <!-- Page header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title" id="page-title">Dashboard</h1>
+            <div class="page-subtitle" id="page-subtitle">netorch — Network Device Orchestrator</div>
+        </div>
+        <div class="header-toolbar" id="page-toolbar"></div>
+    </div>
+
+    <!-- Content -->
+    <main class="content">
+
+        <!-- API error banner (shown when netorch is unreachable) -->
+        <div class="api-error-banner" id="api-error-banner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="api-error-text">Cannot reach netorch API. Check that netorch is running on port 64321.</span>
+        </div>
+
+        <!-- ════ DASHBOARD ════ -->
+        <div id="view-overview" class="view-section">
+            <div class="kpi-grid" id="kpi-grid">
+                <div class="kpi-card" id="kpi-hosts-card">
+                    <div><div class="kpi-val" id="kpi-hosts">—</div><div class="kpi-title">Total Hosts in Inventory</div></div>
+                </div>
+                <div class="kpi-card" id="kpi-files-card">
+                    <div><div class="kpi-val" id="kpi-files">—</div><div class="kpi-title">Inventory Files</div></div>
+                </div>
+                <div class="kpi-card" id="kpi-running-card">
+                    <div><div class="kpi-val" id="kpi-running">—</div><div class="kpi-title">Running Jobs</div></div>
+                </div>
+                <div class="kpi-card" id="kpi-groups-card">
+                    <div><div class="kpi-val" id="kpi-groups">—</div><div class="kpi-title">Inventory Groups</div></div>
+                </div>
+            </div>
+
+            <div class="dash-header-title" style="margin-top:0;">Recent Jobs</div>
+            <div class="section-card" style="padding:0; overflow:hidden; margin-bottom:24px;">
+                <table>
+                    <thead><tr>
+                        <th>Job ID</th><th>Mode</th><th>Status</th><th>Devices</th><th>Progress</th><th>Started</th><th>Duration</th>
+                    </tr></thead>
+                    <tbody id="dash-jobs-body">
+                        <tr><td colspan="7"><div class="empty-state" style="padding:30px 0;"><div class="empty-state-sub">Loading…</div></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="dash-header-title">Platform Distribution</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px;" id="platform-dist"></div>
+        </div>
+
+        <!-- ════ INVENTORY ════ -->
+        <div id="view-inventory" class="view-section">
+            <div class="grid-toolbar">
+                <div class="grid-toolbar-left"><span id="inv-count"></span></div>
+                <div class="grid-toolbar-right">
+                    <button class="btn btn-outline" onclick="Inventory.reload()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Reload All
+                    </button>
+                    <button class="btn btn-outline" onclick="Inventory.openUpload()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload File
+                    </button>
+                    <button class="btn btn-primary" onclick="Inventory.openNew()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New File
+                    </button>
+                </div>
+            </div>
+            <div id="inv-list">
+                <div class="empty-state"><div class="empty-state-sub">Loading inventory…</div></div>
+            </div>
+        </div>
+
+        <!-- ════ HOSTS ════ -->
+        <div id="view-hosts" class="view-section">
+            <div class="grid-toolbar">
+                <div class="grid-toolbar-left">
+                    <span id="host-count"></span>
+                    <div class="search-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" class="search-input" id="host-search" placeholder="Search hosts…" oninput="Hosts.onSearch()" autocomplete="off">
+                    </div>
+                    <select class="form-control" style="width:160px;" id="plat-filter" onchange="Hosts.onFilter()">
+                        <option value="">All Platforms</option>
+                        <option value="cisco_ios">Cisco IOS</option>
+                        <option value="cisco_xe">Cisco IOS-XE</option>
+                        <option value="cisco_xr">Cisco IOS-XR</option>
+                        <option value="linux">Linux</option>
+                    </select>
+                    <select class="form-control" style="width:180px;" id="group-filter" onchange="Hosts.onFilter()">
+                        <option value="">All Groups</option>
+                    </select>
+                </div>
+                <div class="grid-toolbar-right">
+                    <button class="btn btn-outline btn-icon" onclick="Hosts.refresh()" title="Refresh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>Host / IP</th><th>Platform</th><th>Groups</th><th>Port</th><th>Last Job</th><th>Last Result</th><th style="width:80px;">Actions</th>
+                    </tr></thead>
+                    <tbody id="hosts-body"></tbody>
+                </table>
+                <div class="pagination">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span class="pager-info">Rows per page:</span>
+                        <select class="form-control" style="width:72px;padding:5px 8px;" id="host-page-size" onchange="Hosts.onPageSizeChange()">
+                            <option value="50">50</option>
+                            <option value="100" selected>100</option>
+                            <option value="200">200</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div class="pager-info" id="host-pager-info"></div>
+                        <div class="pager-btns" id="host-pager-btns"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════ JOBS ════ -->
+        <div id="view-jobs" class="view-section">
+            <div class="grid-toolbar">
+                <div class="grid-toolbar-left">
+                    <span id="jobs-count"></span>
+                    <select class="form-control" style="width:160px;" id="job-status-filter" onchange="Jobs.onFilter()">
+                        <option value="">All Statuses</option>
+                        <option value="running">Running</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="partial_failure">Partial Failure</option>
+                    </select>
+                </div>
+                <div class="grid-toolbar-right">
+                    <button class="btn btn-outline btn-icon" onclick="Jobs.refresh()" title="Refresh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                    </button>
+                    <button class="btn btn-primary" onclick="Nav.go('newjob')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Job
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>Job ID</th><th>Mode</th><th>Status</th><th>Devices</th><th>Progress</th><th>Started</th><th>Duration</th><th style="width:90px;">Actions</th>
+                    </tr></thead>
+                    <tbody id="jobs-body"></tbody>
+                </table>
+                <div class="pagination">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <div class="pager-info" id="jobs-pager-info"></div>
+                        <div class="pager-btns" id="jobs-pager-btns"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════ JOB DETAIL ════ -->
+        <div id="view-jobdetail" class="view-section">
+            <div id="jobdetail-content">
+                <div class="empty-state"><div class="empty-state-sub">Select a job to view detail.</div></div>
+            </div>
+        </div>
+
+        <!-- ════ NEW JOB ════ -->
+        <div id="view-newjob" class="view-section">
+            <div style="max-width:720px; width:100%;" id="newjob-form-wrap">
+                {% include "newjob.html" %}
+            </div>
+        </div>
+
+        <!-- ════ RUNBOOKS ════ -->
+        <div id="view-runbooks" class="view-section">
+            <div id="runbooks-list-wrap">
+                <div class="loading-row">Loading runbooks…</div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ═══════════════════════════ MODALS ═══════════════════════════ -->
+
+<!-- Inventory: Edit/New file -->
+<div class="modal-overlay" id="modal-inv-edit">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title" id="inv-modal-title">New Inventory File</div>
+            <button class="modal-close" onclick="closeModal('modal-inv-edit')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Filename <span class="required">*</span></label>
+                <input type="text" class="form-control" id="inv-filename" placeholder="e.g. cisco_core.ini">
+                <div class="form-hint">Must end in <code>.ini</code>. Saved to <code>/opt/netorch/inventory/</code></div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">File Content</label>
+                <textarea class="form-control" id="inv-content" rows="16"
+                    placeholder="; Ansible-style INI inventory&#10;[group_name]&#10;&lt;IP&gt;  platform=cisco_ios  username=netaudit  password=CHANGE_ME&#10;&#10;[all:vars]&#10;port=22"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('modal-inv-edit')">Cancel</button>
+            <button class="btn btn-primary" id="inv-save-btn" onclick="Inventory.save()">Save File</button>
+        </div>
+    </div>
+</div>
+
+<!-- Inventory: Upload -->
+<div class="modal-overlay" id="modal-inv-upload">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Upload Inventory File</div>
+            <button class="modal-close" onclick="closeModal('modal-inv-upload')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="drop-zone" id="upload-drop-zone"
+                ondragover="event.preventDefault();this.classList.add('drag-over')"
+                ondragleave="this.classList.remove('drag-over')"
+                ondrop="Inventory.dropFile(event)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    style="width:36px;height:36px;margin:0 auto 12px;display:block;opacity:0.4;">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Drop .ini file here</div>
+                <div style="font-size:12px;">or <span style="color:var(--hcl-blue);cursor:pointer;text-decoration:underline;"
+                    onclick="document.getElementById('upload-input').click()">browse</span></div>
+                <input type="file" id="upload-input" accept=".ini,.cfg,.conf,.txt" style="display:none;"
+                    onchange="Inventory.fileSelected(event)">
+            </div>
+            <div id="upload-preview" style="display:none;margin-top:14px;">
+                <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:6px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="width:18px;height:18px;color:var(--hcl-blue);flex-shrink:0;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <div style="flex:1;">
+                        <div id="upload-fname" style="font-weight:600;font-size:13px;"></div>
+                        <div id="upload-fsize" style="font-size:11px;color:var(--text-secondary);"></div>
+                    </div>
+                    <button class="btn btn-danger btn-icon" onclick="Inventory.clearUpload()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('modal-inv-upload')">Cancel</button>
+            <button class="btn btn-primary" id="upload-save-btn" disabled onclick="Inventory.uploadSave()">Upload & Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Host Detail Drawer -->
+<div class="drawer-overlay" id="host-drawer-overlay" onclick="Hosts.closeDrawer()"></div>
+<div class="drawer" id="host-drawer">
+    <div class="drawer-header">
+        <div class="drawer-title" id="host-drawer-title">Host Detail</div>
+        <button class="drawer-close" onclick="Hosts.closeDrawer()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+    <div class="drawer-body" id="host-drawer-body">
+        <div class="empty-state"><div class="empty-state-sub">Loading…</div></div>
+    </div>
+    <div class="drawer-footer">
+        <span style="font-size:12px;color:var(--text-secondary);" id="host-drawer-meta"></span>
+        <button class="btn btn-primary" id="host-run-btn" onclick="Hosts.runJobForCurrent()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Run Job on This Host
+        </button>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- ════ RUNBOOK RUN MODAL ════ -->
+<div class="modal-overlay" id="runbook-run-modal">
+    <div class="modal" style="max-width:520px;">
+        <div class="modal-header">
+            <h3 class="modal-title" id="run-modal-title">Run Runbook</h3>
+            <button class="modal-close" onclick="Runbooks.closeRunModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Target devices -->
+            <div class="form-group">
+                <label class="form-label">Target Devices / Groups <span class="required">*</span></label>
+                <div class="chip-select" id="run-modal-devices"
+                    onclick="document.getElementById('run-modal-device-input')?.focus()">
+                    <input type="text" id="run-modal-device-input"
+                        placeholder="Type group name or IP, press Enter to add…"
+                        style="border:none;outline:none;font-size:13px;font-family:'Inter';flex:1;min-width:160px;background:transparent;padding:2px 4px;"
+                        onkeydown="Runbooks._deviceKeydown(event)"
+                        autocomplete="off" list="run-modal-group-datalist">
+                </div>
+                <datalist id="run-modal-group-datalist"></datalist>
+                <div class="form-hint">Enter group names (e.g. <code>core_switches</code>) or individual IPs.</div>
+            </div>
+            <!-- Incident number -->
+            <div class="form-group" style="margin-top:12px;">
+                <label class="form-label">Incident Number <span class="required">*</span></label>
+                <input type="text" class="form-control" id="run-modal-incident"
+                    placeholder="e.g. INC12345"
+                    style="text-transform:uppercase;"
+                    oninput="this.value=this.value.toUpperCase()">
+                <div class="form-hint">Job log will be saved under <code>logs/jobs/&lt;incident&gt;/</code>.</div>
+            </div>
+            <!-- Options -->
+            <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label class="form-label" style="margin:0;white-space:nowrap;">Timeout (s)</label>
+                    <input type="number" class="form-control" id="run-modal-timeout" value="30" min="5" max="300" style="width:75px;">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label class="form-label" style="margin:0;white-space:nowrap;">Max Workers</label>
+                    <input type="number" class="form-control" id="run-modal-workers" value="20" min="1" max="100" style="width:65px;">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="Runbooks.closeRunModal()">Cancel</button>
+            <button class="btn btn-primary" id="run-modal-submit-btn" onclick="Runbooks.submitRun()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Run Runbook
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════ JAVASCRIPT ═══════════════════════════ -->
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/nav.js"></script>
+<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/inventory.js"></script>
+<script src="/static/js/hosts.js"></script>
+<script src="/static/js/jobs.js"></script>
+<script src="/static/js/newjob.js"></script>
+<script src="/static/js/runbooks.js"></script>
+
+<script>
+// Boot: determine initial view from server-injected variable
+const INITIAL_VIEW = "{{ initial_view|default('overview') }}";
+const INITIAL_JOB_ID = "{{ job_id|default('') }}";
+
+window.addEventListener('DOMContentLoaded', () => {
+    API.checkHealth();
+    if (INITIAL_VIEW === 'jobdetail' && INITIAL_JOB_ID) {
+        Jobs.openDetail(INITIAL_JOB_ID);
+    } else {
+        Nav.go(INITIAL_VIEW);
+    }
+});
+</script>
+</body>
+</html>

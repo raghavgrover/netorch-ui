@@ -1,0 +1,158 @@
+<!-- New Job form — included as a Jinja2 partial by base.html -->
+<div class="section-card">
+
+    <!-- Mode selector -->
+    <div class="form-group">
+        <label class="form-label">Job Mode <span class="required">*</span></label>
+        <div class="mode-toggle">
+            <button class="mode-btn active" id="mode-audit"     onclick="NewJob.setMode('audit')">Audit (Read-Only)</button>
+            <button class="mode-btn"        id="mode-remediate" onclick="NewJob.setMode('remediate')">Remediate (Write)</button>
+            <button class="mode-btn"        id="mode-runbook"   onclick="NewJob.setMode('runbook')">Execute a Runbook</button>
+        </div>
+        <div class="form-hint" id="mode-hint" style="margin-top:8px;">
+            Audit mode only reads device state — no configuration changes are made.
+        </div>
+    </div>
+
+    <!-- ── Runbook picker (only shown in runbook mode) ── -->
+    <div id="runbook-section" style="display:none;">
+        <div class="form-group">
+            <label class="form-label">Runbook <span class="required">*</span></label>
+            <select class="form-control" id="runbook-select">
+                <option value="">Loading runbooks…</option>
+            </select>
+            <div class="form-hint" id="runbook-desc-hint" style="margin-top:4px;"></div>
+        </div>
+    </div>
+
+    <!-- Target devices / groups -->
+    <div class="form-group">
+        <label class="form-label">Target Devices / Groups <span class="required">*</span></label>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <button class="btn btn-outline" style="font-size:12px;" onclick="NewJob.loadGroupsDropdown()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Add Groups
+            </button>
+            <button class="btn btn-outline" style="font-size:12px;" onclick="NewJob.clearDevices()">Clear</button>
+        </div>
+        <div class="chip-select" id="device-chips" onclick="document.getElementById('device-input').focus()">
+            <input type="text" id="device-input"
+                placeholder="Type group name or IP, press Enter to add…"
+                style="border:none;outline:none;font-size:13px;font-family:'Inter';flex:1;min-width:180px;background:transparent;padding:2px 4px;"
+                onkeydown="NewJob.deviceKeydown(event)"
+                autocomplete="off" list="group-datalist">
+        </div>
+        <datalist id="group-datalist"></datalist>
+        <div class="form-hint">Enter group names (e.g. <code>core_switches</code>) or individual IPs. Press <kbd>Enter</kbd> to add each.</div>
+    </div>
+
+    <!-- Commands (optional when file transfers present) -->
+    <div id="commands-transfers-section">
+    <div class="form-group">
+        <label class="form-label">Commands <span id="cmd-required-star" class="required">*</span></label>
+        <textarea class="form-control" id="job-commands" rows="4"
+            placeholder="show version&#10;show running-config&#10;show ip interface brief"></textarea>
+        <div class="form-hint" id="cmd-hint">One command per line. Runs on every targeted device.</div>
+    </div>
+
+    <!-- ── File Transfers ── -->
+    <hr class="divider">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div>
+            <div style="font-size:13px; font-weight:600; color:var(--text-primary);">File Transfers</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Push files from the relay server to each target device before running commands.</div>
+        </div>
+        <button class="btn btn-outline" style="font-size:12px; white-space:nowrap;" onclick="NewJob.addTransfer()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add File Transfer
+        </button>
+    </div>
+
+    <div id="transfer-list">
+        <!-- Transfer rows injected by JS -->
+        <div id="transfer-empty" style="font-size:13px; color:var(--text-secondary); padding:12px 0; text-align:center; border:1px dashed var(--border-light); border-radius:6px; display:block;">
+            No file transfers — click "Add File Transfer" to push files to devices.
+        </div>
+    </div>
+    </div><!-- /#commands-transfers-section -->
+
+    <!-- Remediation section (hidden in audit mode) -->
+    <div id="remediate-section" style="display:none;">
+        <hr class="divider">
+        <div class="warn-banner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div><strong>Warning:</strong> Remediation commands push configuration changes to devices. These cannot be automatically undone. A config backup is strongly recommended.</div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Remediation Commands</label>
+            <textarea class="form-control" id="job-remediation-commands" rows="5"
+                placeholder="interface GigabitEthernet0/1&#10; description WAN Link&#10; no shutdown"></textarea>
+            <div class="form-hint">Config-mode commands. netorch handles <code>conf t</code> and <code>commit</code>/<code>write mem</code> automatically per platform.</div>
+        </div>
+    </div>
+
+    <!-- Options row -->
+    <hr class="divider">
+    <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+        <label style="font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:7px;cursor:pointer;">
+            <input type="checkbox" id="opt-backup" checked> Backup config before changes
+        </label>
+        <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+            <label class="form-label" style="margin:0;white-space:nowrap;">Timeout (s)</label>
+            <input type="number" class="form-control" id="opt-timeout" value="30" min="5" max="300" style="width:80px;">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <label class="form-label" style="margin:0;white-space:nowrap;">Max Workers</label>
+            <input type="number" class="form-control" id="opt-workers" value="20" min="1" max="100" style="width:70px;">
+        </div>
+    </div>
+
+    <!-- Submit row -->
+    <div style="margin-top:22px;display:flex;gap:12px;justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="NewJob.reset()">Reset</button>
+        <button class="btn btn-primary" id="submit-job-btn" onclick="NewJob.submit()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Submit Job
+        </button>
+    </div>
+</div>
+
+<!-- Transfer row template (cloned by JS) -->
+<template id="transfer-row-tpl">
+    <div class="transfer-row" style="border:1px solid var(--border-light);border-radius:6px;padding:14px 16px;margin-bottom:10px;background:var(--bg-card);">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+            <!-- Row number badge -->
+            <div class="transfer-num" style="background:var(--hcl-blue);color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:8px;">1</div>
+            <div style="flex:1;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+                    <div>
+                        <label class="form-label">Local Path on Relay <span class="required">*</span></label>
+                        <input type="text" class="form-control transfer-local" placeholder="/opt/netorch/files/firmware.bin">
+                        <div class="form-hint">Absolute path on the relay server.</div>
+                    </div>
+                    <div>
+                        <label class="form-label">Remote Path on Device <span class="required">*</span></label>
+                        <input type="text" class="transfer-remote form-control" placeholder="/tmp/firmware.bin">
+                        <div class="form-hint">Destination path on the target device.</div>
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label">Post-Transfer Commands <span style="font-weight:400;color:var(--text-secondary);">(optional)</span></label>
+                    <textarea class="form-control transfer-post-cmds" rows="2"
+                        placeholder="install add file /tmp/firmware.bin&#10;install activate"></textarea>
+                    <div class="form-hint">Commands to run on the device after the file is transferred. One per line.</div>
+                </div>
+            </div>
+            <!-- Remove button -->
+            <button class="btn btn-danger btn-icon" title="Remove this transfer" onclick="NewJob.removeTransfer(this)" style="margin-top:6px;flex-shrink:0;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</template>
