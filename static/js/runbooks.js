@@ -224,12 +224,7 @@ const Runbooks = (() => {
 
         const res = await API.runbookGet(name);
         if (res.ok) {
-            const rb = res.data;
-            const lines = [
-                rb.description ? `# ${rb.description}` : '',
-                ...(rb.commands || []),
-            ].filter(l => l !== '');
-            $id('runbook-view-content').value = lines.join('\n');
+            $id('runbook-view-content').value = (res.data.raw_lines || []).join('\n');
         } else {
             $id('runbook-view-content').value = `# Error: ${res.data?.error || 'Unknown'}`;
         }
@@ -246,12 +241,7 @@ const Runbooks = (() => {
 
         const res = await API.runbookGet(name);
         if (res.ok) {
-            const rb = res.data;
-            const lines = [
-                rb.description ? `# ${rb.description}` : '',
-                ...(rb.commands || []),
-            ].filter(l => l !== '');
-            $id('runbook-edit-content').value = lines.join('\n');
+            $id('runbook-edit-content').value = (res.data.raw_lines || []).join('\n');
         } else {
             $id('runbook-edit-content').value = `# Error: ${res.data?.error || 'Unknown'}`;
         }

@@ -400,8 +400,8 @@
 <div id="toast-container"></div>
 
 <!-- ════ RUNBOOK UPLOAD MODAL ════ -->
-<div class="modal-overlay" id="modal-rb-upload">
-    <div class="modal">
+<div class="modal-overlay" id="modal-rb-upload" onclick="event.stopPropagation()">
+    <div class="modal" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title">Upload Runbook</div>
             <button class="modal-close" onclick="closeModal('modal-rb-upload')">
@@ -448,8 +448,8 @@
 </div>
 
 <!-- ════ RUNBOOK NEW FILE MODAL ════ -->
-<div class="modal-overlay" id="modal-rb-new">
-    <div class="modal modal-lg">
+<div class="modal-overlay" id="modal-rb-new" onclick="event.stopPropagation()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title">New Runbook</div>
             <button class="modal-close" onclick="closeModal('modal-rb-new')">
@@ -477,8 +477,8 @@
 </div>
 
 <!-- ════ RUNBOOK VIEW MODAL ════ -->
-<div class="modal-overlay" id="runbook-view-modal">
-    <div class="modal modal-lg">
+<div class="modal-overlay" id="runbook-view-modal" onclick="event.stopPropagation()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title" id="runbook-view-title">View Runbook</div>
             <button class="modal-close" onclick="closeModal('runbook-view-modal')">
@@ -499,8 +499,8 @@
 </div>
 
 <!-- ════ RUNBOOK EDIT MODAL ════ -->
-<div class="modal-overlay" id="runbook-edit-modal">
-    <div class="modal modal-lg">
+<div class="modal-overlay" id="runbook-edit-modal" onclick="event.stopPropagation()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title" id="runbook-edit-title">Edit Runbook</div>
             <button class="modal-close" onclick="closeModal('runbook-edit-modal')">
@@ -528,8 +528,8 @@
 </div>
 
 <!-- ════ RUNBOOK RUN MODAL ════ -->
-<div class="modal-overlay" id="runbook-run-modal">
-    <div class="modal" style="max-width:520px;">
+<div class="modal-overlay" id="runbook-run-modal" onclick="event.stopPropagation()">
+    <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
         <div class="modal-header">
             <h3 class="modal-title" id="run-modal-title">Run Runbook</h3>
             <button class="modal-close" onclick="Runbooks.closeRunModal()">
