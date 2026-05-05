@@ -8,6 +8,7 @@
             <button class="mode-btn active" id="mode-audit"     onclick="NewJob.setMode('audit')">Audit (Read-Only)</button>
             <button class="mode-btn"        id="mode-remediate" onclick="NewJob.setMode('remediate')">Remediate (Write)</button>
             <button class="mode-btn"        id="mode-runbook"   onclick="NewJob.setMode('runbook')">Execute a Runbook</button>
+            <button class="mode-btn"        id="mode-workflow"  onclick="NewJob.setMode('workflow')">Execute a Workflow</button>
         </div>
         <div class="form-hint" id="mode-hint" style="margin-top:8px;">
             Audit mode only reads device state — no configuration changes are made.
@@ -24,6 +25,65 @@
             <div class="form-hint" id="runbook-desc-hint" style="margin-top:4px;"></div>
         </div>
     </div>
+
+    <!-- ── Workflow picker (only shown in workflow mode)  ← NEW ── -->
+    <div id="workflow-section" style="display:none;">
+        <div class="form-group">
+            <label class="form-label">Workflow Script <span class="required">*</span></label>
+            <select class="form-control" id="workflow-select">
+                <option value="">Loading workflows…</option>
+            </select>
+            <div class="form-hint" id="workflow-desc-hint" style="margin-top:4px;"></div>
+        </div>
+
+        <!-- Parameters section -->
+        <div class="form-group">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <div>
+                    <label class="form-label" style="margin-bottom:2px;">Parameters</label>
+                    <div style="font-size:12px;color:var(--text-secondary);">
+                        Key/value pairs injected as environment variables into the workflow script.
+                        Declared <code># PARAM:</code> lines are pre-populated from the script.
+                    </div>
+                </div>
+                <button class="btn btn-outline" style="font-size:12px;white-space:nowrap;margin-left:12px;"
+                    onclick="NewJob.addWfParam()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Parameter
+                </button>
+            </div>
+            <!-- Header row for parameter columns -->
+            <div style="display:flex;gap:8px;margin-bottom:6px;padding:0 32px 0 0;">
+                <div style="flex:0 0 180px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Parameter Name</div>
+                <div style="flex:1;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Value</div>
+            </div>
+            <div id="wf-param-rows-newjob">
+                <div style="font-size:12px;color:var(--text-secondary);padding:4px 0;font-style:italic;">
+                    Select a workflow script above to load its declared parameters.
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow-specific options -->
+        <hr class="divider">
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+            <div style="font-size:13px;color:var(--text-secondary);font-style:italic;flex:1;">
+                Workflows run one subprocess per device — timeout applies per device.
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label class="form-label" style="margin:0;white-space:nowrap;">Timeout (s)</label>
+                <input type="number" class="form-control" id="opt-wf-timeout" value="300" min="30" max="3600" style="width:90px;">
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label class="form-label" style="margin:0;white-space:nowrap;">Max Workers</label>
+                <input type="number" class="form-control" id="opt-wf-workers" value="10" min="1" max="100" style="width:70px;">
+                <div class="form-hint" style="margin:0;">Lower for API-heavy workflows.</div>
+            </div>
+        </div>
+    </div>
+    <!-- ── END workflow section ── -->
 
     <!-- Target devices / groups -->
     <div class="form-group">
@@ -94,9 +154,9 @@
         </div>
     </div>
 
-    <!-- Options row -->
-    <hr class="divider">
-    <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+    <!-- Options row (hidden in workflow mode — workflow has its own options above) -->
+    <hr class="divider" id="options-divider">
+    <div id="standard-options" style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
         <label style="font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:7px;cursor:pointer;">
             <input type="checkbox" id="opt-backup" checked> Backup config before changes
         </label>

@@ -13,6 +13,7 @@ const Nav = (() => {
         newjob:    { title: 'New Job',     subtitle: 'Submit a new audit or remediation job' },
         jobdetail: { title: 'Job Detail',  subtitle: 'Per-device results and live log stream' },
         runbooks:  { title: 'Runbooks',    subtitle: 'Execute predefined command runbooks on devices' },
+        workflows: { title: 'Workflows',   subtitle: 'Multi-step orchestration scripts' },
     };
 
     const history  = [];
@@ -105,6 +106,7 @@ const Nav = (() => {
         if (view === 'jobs')      Jobs.load();
         if (view === 'newjob')    NewJob.onEnter();
         if (view === 'runbooks')  Runbooks.load();
+        if (view === 'workflows') Workflows.load();
     }
 
     return { go, back, fwd };
