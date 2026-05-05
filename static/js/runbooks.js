@@ -60,6 +60,7 @@ const Runbooks = (() => {
                         <th>Description</th>
                         <th style="width:80px;text-align:right;">Commands</th>
                         <th style="width:160px;">Last Modified</th>
+                        <th style="width:120px;">Actions</th>
                         <th style="width:90px;"></th>
                     </tr>
                 </thead>
@@ -77,6 +78,23 @@ const Runbooks = (() => {
                             <td style="color:var(--text-secondary);font-size:12px;">${escHtml(rb.description || '—')}</td>
                             <td style="text-align:right;font-size:13px;">${rb.command_count}</td>
                             <td style="font-size:12px;color:var(--text-secondary);">${_fmtTime(rb.modified_at)}</td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button class="btn btn-outline btn-icon" title="View runbook"
+                                        onclick="Runbooks.openViewModal('${escHtml(rb.name)}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                    </button>
+                                    <button class="btn btn-outline" style="font-size:12px;padding:5px 10px;"
+                                        title="Edit runbook" onclick="Runbooks.openEditModal('${escHtml(rb.name)}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="margin-right:4px;vertical-align:middle;">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>Edit
+                                    </button>
+                                </div>
+                            </td>
                             <td style="text-align:right;">
                                 <button class="btn btn-primary" style="font-size:12px;padding:5px 12px;"
                                     onclick="Runbooks.openRunModal('${escHtml(rb.name)}')">
@@ -88,6 +106,71 @@ const Runbooks = (() => {
                     `).join('')}
                 </tbody>
             </table>`;
+    }
+
+    // ── View Modal ────────────────────────────────────────────────────────────
+
+    async function openViewModal(name) {
+        $id('runbook-view-title').textContent = `View: ${name}`;
+        $id('runbook-view-content').value = 'Loading…';
+        openModal('runbook-view-modal');
+
+        const res = await API.runbookGet(name);
+        if (res.ok) {
+            const rb = res.data;
+            const lines = [
+                rb.description ? `# ${rb.description}` : '',
+                ...(rb.commands || []),
+            ].filter(l => l !== '');
+            $id('runbook-view-content').value = lines.join('\n');
+        } else {
+            $id('runbook-view-content').value = `# Error: ${res.data?.error || 'Unknown'}`;
+        }
+    }
+
+    // ── Edit Modal ────────────────────────────────────────────────────────────
+
+    async function openEditModal(name) {
+        $id('runbook-edit-title').textContent = `Edit: ${name}`;
+        $id('runbook-edit-filename').value = name;
+        $id('runbook-edit-content').value = 'Loading…';
+        $id('runbook-edit-save-btn').disabled = true;
+        openModal('runbook-edit-modal');
+
+        const res = await API.runbookGet(name);
+        if (res.ok) {
+            const rb = res.data;
+            const lines = [
+                rb.description ? `# ${rb.description}` : '',
+                ...(rb.commands || []),
+            ].filter(l => l !== '');
+            $id('runbook-edit-content').value = lines.join('\n');
+        } else {
+            $id('runbook-edit-content').value = `# Error: ${res.data?.error || 'Unknown'}`;
+        }
+        $id('runbook-edit-save-btn').disabled = false;
+    }
+
+    async function saveEdit() {
+        const name    = $id('runbook-edit-filename').value.trim();
+        const content = $id('runbook-edit-content').value;
+        if (!name) return;
+
+        $id('runbook-edit-save-btn').disabled = true;
+        $id('runbook-edit-save-btn').textContent = 'Saving…';
+
+        const res = await API.runbookSave(name, content);
+
+        $id('runbook-edit-save-btn').disabled = false;
+        $id('runbook-edit-save-btn').textContent = 'Save Runbook';
+
+        if (res.ok) {
+            closeModal('runbook-edit-modal');
+            showToast(`Saved ${name}`, 'success');
+            _fetchRunbooks();
+        } else {
+            showToast(`Save failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+        }
     }
 
     // ── Run Modal ─────────────────────────────────────────────────────────────
@@ -227,6 +310,8 @@ const Runbooks = (() => {
 
     return {
         load,
+        openViewModal,
+        openEditModal, saveEdit,
         openRunModal, closeRunModal, submitRun,
         _deviceKeydown, _removeDevice,
     };

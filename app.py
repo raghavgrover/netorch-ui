@@ -82,6 +82,11 @@ def runbooks_page():
     return render_template("base.html", initial_view="runbooks")
 
 
+@app.route("/workflows")
+def workflows_page():
+    return render_template("base.html", initial_view="workflows")
+
+
 # ─── API proxy: Health ────────────────────────────────────────────────────────
 
 @app.route("/api/health")
@@ -234,10 +239,52 @@ def api_runbook_get(name: str):
     return jsonify(data), status
 
 
+@app.route("/api/runbooks/<name>", methods=["PUT"])
+def api_runbook_put(name: str):
+    body = request.get_json(silent=True) or {}
+    data, status = nc.runbook_save(name, body.get("content", ""))
+    return jsonify(data), status
+
+
 @app.route("/api/runbooks/<name>/run", methods=["POST"])
 def api_runbook_run(name: str):
     payload = request.get_json(silent=True) or {}
     data, status = nc.runbook_run(name, payload)
+    return jsonify(data), status
+
+
+# ─── API proxy: Workflows ─────────────────────────────────────────────────────
+
+@app.route("/api/workflows")
+def api_workflows_list():
+    data, status = nc.workflows_list()
+    return jsonify(data), status
+
+
+@app.route("/api/workflows/<name>")
+def api_workflow_get(name: str):
+    data, status = nc.workflow_get(name)
+    return jsonify(data), status
+
+
+@app.route("/api/workflows/<name>/run", methods=["POST"])
+def api_workflow_run(name: str):
+    payload = request.get_json(silent=True) or {}
+    data, status = nc.workflow_run(name, payload)
+    return jsonify(data), status
+
+
+@app.route("/api/workflows/<name>/log/<job_id>")
+def api_workflow_log_all(name: str, job_id: str):
+    since_id = request.args.get("since_id", 0, type=int)
+    data, status = nc.workflow_log_all(name, job_id, since_id)
+    return jsonify(data), status
+
+
+@app.route("/api/workflows/<name>/log/<job_id>/<host>")
+def api_workflow_log_device(name: str, job_id: str, host: str):
+    since_id = request.args.get("since_id", 0, type=int)
+    data, status = nc.workflow_log_device(name, job_id, host, since_id)
     return jsonify(data), status
 
 

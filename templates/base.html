@@ -42,6 +42,13 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
             Runbooks
         </a>
+        <a class="menu-item" data-view="workflows" href="/workflows" onclick="Nav.go('workflows',this);return false;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="menu-icon">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <polyline points="9 11 12 14 22 4"/>
+            </svg>
+            <span>Workflows</span>
+        </a>
     </div>
 </nav>
 
@@ -255,6 +262,23 @@
             </div>
         </div>
 
+        <!-- ════ WORKFLOWS ════ -->
+        <div id="view-workflows" class="view-section">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <div>
+                    <h2 style="font-size:18px;font-weight:700;color:var(--text-primary);margin:0;">Workflows</h2>
+                    <div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">
+                        Multi-step orchestration scripts that combine local API calls with device SSH steps.
+                    </div>
+                </div>
+            </div>
+            <div class="section-card" style="padding:0;">
+                <div id="workflows-list-wrap">
+                    <div class="loading-row">Loading workflows…</div>
+                </div>
+            </div>
+        </div>
+
     </main>
 </div>
 
@@ -361,6 +385,57 @@
 <!-- Toast container -->
 <div id="toast-container"></div>
 
+<!-- ════ RUNBOOK VIEW MODAL ════ -->
+<div class="modal-overlay" id="runbook-view-modal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title" id="runbook-view-title">View Runbook</div>
+            <button class="modal-close" onclick="closeModal('runbook-view-modal')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">File Content</label>
+                <textarea class="form-control" id="runbook-view-content" rows="18"
+                    readonly style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('runbook-view-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ════ RUNBOOK EDIT MODAL ════ -->
+<div class="modal-overlay" id="runbook-edit-modal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title" id="runbook-edit-title">Edit Runbook</div>
+            <button class="modal-close" onclick="closeModal('runbook-edit-modal')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Filename</label>
+                <input type="text" class="form-control" id="runbook-edit-filename" disabled>
+                <div class="form-hint">Lines starting with <code>#</code> are comments. All other non-blank lines are executed as commands.</div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">File Content</label>
+                <textarea class="form-control" id="runbook-edit-content" rows="16"
+                    style="font-family:monospace;font-size:12px;resize:vertical;"
+                    placeholder="# Description of this runbook&#10;show version&#10;show ip interface brief"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('runbook-edit-modal')">Cancel</button>
+            <button class="btn btn-primary" id="runbook-edit-save-btn" onclick="Runbooks.saveEdit()">Save Runbook</button>
+        </div>
+    </div>
+</div>
+
 <!-- ════ RUNBOOK RUN MODAL ════ -->
 <div class="modal-overlay" id="runbook-run-modal">
     <div class="modal" style="max-width:520px;">
@@ -418,6 +493,92 @@
     </div>
 </div>
 
+<!-- ════ WORKFLOW RUN MODAL ════ -->
+<div class="modal-overlay" id="workflow-run-modal">
+    <div class="modal" style="max-width:560px;width:100%;">
+        <div class="modal-header">
+            <h3 class="modal-title" id="wf-run-modal-title">Run Workflow</h3>
+            <button class="modal-close" onclick="Workflows.closeRunModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="modal-body">
+
+            <!-- Target devices -->
+            <div class="form-group">
+                <label class="form-label">Target Devices / Groups <span class="required">*</span></label>
+                <div class="chip-select" id="wf-run-modal-devices"
+                     onclick="document.getElementById('wf-run-modal-device-input')?.focus()"
+                     style="min-height:40px;flex-wrap:wrap;gap:4px;cursor:text;">
+                </div>
+                <datalist id="wf-run-modal-group-datalist"></datalist>
+                <div class="form-hint">Group names or IPs. Press Enter to add each.</div>
+            </div>
+
+            <!-- Parameters -->
+            <div class="form-group">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <label class="form-label" style="margin:0;">Parameters</label>
+                    <button class="btn btn-outline" style="font-size:11px;padding:4px 10px;"
+                        onclick="Workflows.addParam()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Add
+                    </button>
+                </div>
+                <!-- Header -->
+                <div style="display:flex;gap:8px;margin-bottom:4px;padding-right:28px;">
+                    <div style="flex:0 0 150px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Name</div>
+                    <div style="flex:1;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Value</div>
+                </div>
+                <div id="wf-param-rows">
+                    <div style="font-size:12px;color:var(--text-secondary);font-style:italic;padding:4px 0;">
+                        No parameters declared.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Incident -->
+            <div class="form-group">
+                <label class="form-label">Incident Number <span class="required">*</span></label>
+                <input type="text" class="form-control" id="wf-run-modal-incident"
+                    placeholder="INC12345" style="text-transform:uppercase;">
+                <div class="form-hint">Used to organise job logs.</div>
+            </div>
+
+            <!-- Options -->
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label class="form-label" style="margin:0;white-space:nowrap;font-size:12px;">Timeout (s)</label>
+                    <input type="number" class="form-control" id="wf-run-modal-timeout"
+                        value="300" min="30" max="3600" style="width:80px;font-size:12px;">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label class="form-label" style="margin:0;white-space:nowrap;font-size:12px;">Max Workers</label>
+                    <input type="number" class="form-control" id="wf-run-modal-workers"
+                        value="10" min="1" max="100" style="width:65px;font-size:12px;">
+                </div>
+                <div style="font-size:11px;color:var(--text-secondary);flex:1;">
+                    Lower workers for API-heavy workflows.
+                </div>
+            </div>
+
+        </div><!-- /.modal-body -->
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="Workflows.closeRunModal()">Cancel</button>
+            <button class="btn btn-primary" id="wf-run-modal-submit-btn" onclick="Workflows.submitRun()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                Run Workflow
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ═══════════════════════════ JAVASCRIPT ═══════════════════════════ -->
 <script src="/static/js/utils.js"></script>
 <script src="/static/js/api.js"></script>
@@ -428,6 +589,7 @@
 <script src="/static/js/jobs.js"></script>
 <script src="/static/js/newjob.js"></script>
 <script src="/static/js/runbooks.js"></script>
+<script src="/static/js/workflows.js"></script>
 
 <script>
 // Boot: determine initial view from server-injected variable

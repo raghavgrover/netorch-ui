@@ -321,3 +321,29 @@ def runbook_get(name: str) -> tuple:
 
 def runbook_run(name: str, payload: dict) -> tuple:
     return _post(f"/runbooks/{name}/run", payload)
+
+
+def runbook_save(name: str, content: str) -> tuple:
+    return _put(f"/runbooks/{name}", {"content": content})
+
+
+# ─── Workflows ────────────────────────────────────────────────────────────────
+
+def workflows_list() -> tuple:
+    return _get("/workflows")
+
+
+def workflow_get(name: str) -> tuple:
+    return _get(f"/workflows/{name}")
+
+
+def workflow_run(name: str, payload: dict) -> tuple:
+    return _post(f"/workflows/{name}/run", payload)
+
+
+def workflow_log_all(name: str, job_id: str, since_id: int = 0) -> tuple:
+    return _get(f"/workflows/{name}/log/{job_id}", params={"since_id": since_id})
+
+
+def workflow_log_device(name: str, job_id: str, host: str, since_id: int = 0) -> tuple:
+    return _get(f"/workflows/{name}/log/{job_id}/{host}", params={"since_id": since_id})
