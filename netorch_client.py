@@ -327,6 +327,10 @@ def runbook_save(name: str, content: str) -> tuple:
     return _put(f"/runbooks/{name}", {"content": content})
 
 
+def runbook_create(filename: str, content: str) -> tuple:
+    return _post("/runbooks", {"filename": filename, "content": content})
+
+
 # ─── Workflows ────────────────────────────────────────────────────────────────
 
 def workflows_list() -> tuple:

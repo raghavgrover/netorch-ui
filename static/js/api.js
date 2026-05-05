@@ -89,7 +89,8 @@ const API = (() => {
     const runbooksList = ()              => get('/api/runbooks');
     const runbookGet   = (name)          => get(`/api/runbooks/${encodeURIComponent(name)}`);
     const runbookRun   = (name, payload) => post(`/api/runbooks/${encodeURIComponent(name)}/run`, payload);
-    const runbookSave  = (name, content) => put(`/api/runbooks/${encodeURIComponent(name)}`, { content });
+    const runbookSave   = (name, content)       => put(`/api/runbooks/${encodeURIComponent(name)}`, { content });
+    const runbookCreate = (filename, content)   => post('/api/runbooks', { filename, content });
 
     return {
         get, post,
@@ -99,6 +100,6 @@ const API = (() => {
         inventoryGroups,
         hosts,
         jobsList, jobGet, jobDetail, jobSubmit, jobCancel, jobLogUrl,
-        runbooksList, runbookGet, runbookRun, runbookSave,
+        runbooksList, runbookGet, runbookRun, runbookSave, runbookCreate,
     };
 })();

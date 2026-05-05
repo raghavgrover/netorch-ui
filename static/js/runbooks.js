@@ -10,6 +10,7 @@ const Runbooks = (() => {
     let _runbooks   = [];
     let _runbookName = null;   // currently-selected runbook for the run modal
     let _devices    = [];
+    let _uploadFile = null;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ const Runbooks = (() => {
         }
 
         _runbooks = res.data.runbooks || [];
+        const countEl = $id('rb-count');
+        if (countEl) countEl.textContent = `${_runbooks.length} runbook${_runbooks.length !== 1 ? 's' : ''}`;
         _render();
     }
 
@@ -106,6 +109,110 @@ const Runbooks = (() => {
                     `).join('')}
                 </tbody>
             </table>`;
+    }
+
+    // ── Reload All ────────────────────────────────────────────────────────────
+
+    async function reload() {
+        await _fetchRunbooks();
+        showToast('Runbooks refreshed', 'success');
+    }
+
+    // ── New File Modal ────────────────────────────────────────────────────────
+
+    function openNew() {
+        $id('rb-new-filename').value = '';
+        $id('rb-new-content').value = '# Description of what this runbook does\n';
+        $id('rb-new-save-btn').disabled = false;
+        $id('rb-new-save-btn').textContent = 'Create Runbook';
+        openModal('modal-rb-new');
+        setTimeout(() => $id('rb-new-filename').focus(), 100);
+    }
+
+    async function saveNew() {
+        const filename = $id('rb-new-filename').value.trim();
+        const content  = $id('rb-new-content').value;
+
+        if (!filename) { showToast('Filename is required', 'error'); return; }
+        if (!filename.endsWith('.sh')) { showToast('Filename must end with .sh', 'error'); return; }
+
+        $id('rb-new-save-btn').disabled = true;
+        $id('rb-new-save-btn').textContent = 'Creating…';
+
+        const res = await API.runbookCreate(filename, content);
+
+        $id('rb-new-save-btn').disabled = false;
+        $id('rb-new-save-btn').textContent = 'Create Runbook';
+
+        if (res.ok) {
+            closeModal('modal-rb-new');
+            showToast(`Created ${filename}`, 'success');
+            _fetchRunbooks();
+        } else {
+            showToast(`Create failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+        }
+    }
+
+    // ── Upload Modal ──────────────────────────────────────────────────────────
+
+    function openUpload() {
+        _uploadFile = null;
+        $id('rb-upload-preview').style.display = 'none';
+        $id('rb-upload-save-btn').disabled = true;
+        $id('rb-upload-input').value = '';
+        openModal('modal-rb-upload');
+    }
+
+    function fileSelected(event) {
+        const file = event.target.files[0];
+        if (file) _setUploadFile(file);
+    }
+
+    function dropFile(event) {
+        event.preventDefault();
+        $id('rb-upload-drop-zone').classList.remove('drag-over');
+        const file = event.dataTransfer.files[0];
+        if (file) _setUploadFile(file);
+    }
+
+    function _setUploadFile(file) {
+        _uploadFile = file;
+        $id('rb-upload-fname').textContent = file.name;
+        $id('rb-upload-fsize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        $id('rb-upload-preview').style.display = '';
+        $id('rb-upload-save-btn').disabled = false;
+    }
+
+    function clearUpload() {
+        _uploadFile = null;
+        $id('rb-upload-preview').style.display = 'none';
+        $id('rb-upload-save-btn').disabled = true;
+        $id('rb-upload-input').value = '';
+    }
+
+    async function uploadSave() {
+        if (!_uploadFile) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content  = e.target.result;
+            const filename = _uploadFile.name;
+            $id('rb-upload-save-btn').disabled = true;
+            $id('rb-upload-save-btn').textContent = 'Uploading…';
+
+            const res = await API.runbookCreate(filename, content);
+            $id('rb-upload-save-btn').disabled = false;
+            $id('rb-upload-save-btn').textContent = 'Upload & Save';
+
+            if (res.ok) {
+                closeModal('modal-rb-upload');
+                clearUpload();
+                showToast(`Uploaded ${filename}`, 'success');
+                _fetchRunbooks();
+            } else {
+                showToast(`Upload failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+            }
+        };
+        reader.readAsText(_uploadFile);
     }
 
     // ── View Modal ────────────────────────────────────────────────────────────
@@ -310,6 +417,9 @@ const Runbooks = (() => {
 
     return {
         load,
+        reload,
+        openNew, saveNew,
+        openUpload, fileSelected, dropFile, clearUpload, uploadSave,
         openViewModal,
         openEditModal, saveEdit,
         openRunModal, closeRunModal, submitRun,

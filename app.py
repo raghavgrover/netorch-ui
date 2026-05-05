@@ -239,6 +239,13 @@ def api_runbook_get(name: str):
     return jsonify(data), status
 
 
+@app.route("/api/runbooks", methods=["POST"])
+def api_runbook_create():
+    body = request.get_json(silent=True) or {}
+    data, status = nc.runbook_create(body.get("filename", ""), body.get("content", ""))
+    return jsonify(data), status
+
+
 @app.route("/api/runbooks/<name>", methods=["PUT"])
 def api_runbook_put(name: str):
     body = request.get_json(silent=True) or {}
