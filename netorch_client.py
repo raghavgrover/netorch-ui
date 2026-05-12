@@ -337,6 +337,14 @@ def workflows_list() -> tuple:
     return _get("/workflows")
 
 
+def workflow_create(filename: str, content: str) -> tuple:
+    return _post("/workflows", {"filename": filename, "content": content})
+
+
+def workflow_save(name: str, content: str) -> tuple:
+    return _put(f"/workflows/{name}", {"content": content})
+
+
 def workflow_get(name: str) -> tuple:
     return _get(f"/workflows/{name}")
 

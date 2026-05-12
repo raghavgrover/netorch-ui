@@ -92,6 +92,12 @@ const API = (() => {
     const runbookSave   = (name, content)       => put(`/api/runbooks/${encodeURIComponent(name)}`, { content });
     const runbookCreate = (filename, content)   => post('/api/runbooks', { filename, content });
 
+    // ── Workflows ─────────────────────────────────────────────────────────────
+    const workflowsList  = ()                   => get('/api/workflows');
+    const workflowGet    = (name)               => get(`/api/workflows/${encodeURIComponent(name)}`);
+    const workflowSave   = (name, content)      => put(`/api/workflows/${encodeURIComponent(name)}`, { content });
+    const workflowCreate = (filename, content)  => post('/api/workflows', { filename, content });
+
     return {
         get, post,
         checkHealth,
@@ -101,5 +107,6 @@ const API = (() => {
         hosts,
         jobsList, jobGet, jobDetail, jobSubmit, jobCancel, jobLogUrl,
         runbooksList, runbookGet, runbookRun, runbookSave, runbookCreate,
+        workflowsList, workflowGet, workflowSave, workflowCreate,
     };
 })();

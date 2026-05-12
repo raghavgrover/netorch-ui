@@ -268,9 +268,23 @@ def api_workflows_list():
     return jsonify(data), status
 
 
+@app.route("/api/workflows", methods=["POST"])
+def api_workflow_create():
+    body = request.get_json(silent=True) or {}
+    data, status = nc.workflow_create(body.get("filename", ""), body.get("content", ""))
+    return jsonify(data), status
+
+
 @app.route("/api/workflows/<name>")
 def api_workflow_get(name: str):
     data, status = nc.workflow_get(name)
+    return jsonify(data), status
+
+
+@app.route("/api/workflows/<name>", methods=["PUT"])
+def api_workflow_put(name: str):
+    body = request.get_json(silent=True) or {}
+    data, status = nc.workflow_save(name, body.get("content", ""))
     return jsonify(data), status
 
 

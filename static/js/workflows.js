@@ -18,6 +18,7 @@ const Workflows = (() => {
     let _workflowName = null;   // currently-selected workflow for the run modal
     let _devices      = [];
     let _params       = [];     // [{key, value}]
+    let _uploadFile   = null;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -38,6 +39,8 @@ const Workflows = (() => {
         }
 
         _workflows = res.data.workflows || [];
+        const countEl = $id('wf-count');
+        if (countEl) countEl.textContent = `${_workflows.length} workflow${_workflows.length !== 1 ? 's' : ''}`;
         _render();
     }
 
@@ -102,6 +105,110 @@ const Workflows = (() => {
                     `).join('')}
                 </tbody>
             </table>`;
+    }
+
+    // ── Reload All ────────────────────────────────────────────────────────────
+
+    async function reload() {
+        await _fetchWorkflows();
+        showToast('Workflows refreshed', 'success');
+    }
+
+    // ── New File Modal ────────────────────────────────────────────────────────
+
+    function openNew() {
+        $id('wf-new-filename').value = '';
+        $id('wf-new-content').value = '#!/bin/bash\n# Description of what this workflow does\n';
+        $id('wf-new-save-btn').disabled = false;
+        $id('wf-new-save-btn').textContent = 'Create Workflow';
+        openModal('modal-wf-new');
+        setTimeout(() => $id('wf-new-filename').focus(), 100);
+    }
+
+    async function saveNew() {
+        const filename = $id('wf-new-filename').value.trim();
+        const content  = $id('wf-new-content').value;
+
+        if (!filename) { showToast('Filename is required', 'error'); return; }
+        if (!filename.endsWith('.sh')) { showToast('Filename must end with .sh', 'error'); return; }
+
+        $id('wf-new-save-btn').disabled = true;
+        $id('wf-new-save-btn').textContent = 'Creating…';
+
+        const res = await API.workflowCreate(filename, content);
+
+        $id('wf-new-save-btn').disabled = false;
+        $id('wf-new-save-btn').textContent = 'Create Workflow';
+
+        if (res.ok) {
+            closeModal('modal-wf-new');
+            showToast(`Created ${filename}`, 'success');
+            _fetchWorkflows();
+        } else {
+            showToast(`Create failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+        }
+    }
+
+    // ── Upload Modal ──────────────────────────────────────────────────────────
+
+    function openUpload() {
+        _uploadFile = null;
+        $id('wf-upload-preview').style.display = 'none';
+        $id('wf-upload-save-btn').disabled = true;
+        $id('wf-upload-input').value = '';
+        openModal('modal-wf-upload');
+    }
+
+    function fileSelected(event) {
+        const file = event.target.files[0];
+        if (file) _setUploadFile(file);
+    }
+
+    function dropFile(event) {
+        event.preventDefault();
+        $id('wf-upload-drop-zone').classList.remove('drag-over');
+        const file = event.dataTransfer.files[0];
+        if (file) _setUploadFile(file);
+    }
+
+    function _setUploadFile(file) {
+        _uploadFile = file;
+        $id('wf-upload-fname').textContent = file.name;
+        $id('wf-upload-fsize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        $id('wf-upload-preview').style.display = '';
+        $id('wf-upload-save-btn').disabled = false;
+    }
+
+    function clearUpload() {
+        _uploadFile = null;
+        $id('wf-upload-preview').style.display = 'none';
+        $id('wf-upload-save-btn').disabled = true;
+        $id('wf-upload-input').value = '';
+    }
+
+    async function uploadSave() {
+        if (!_uploadFile) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content  = e.target.result;
+            const filename = _uploadFile.name;
+            $id('wf-upload-save-btn').disabled = true;
+            $id('wf-upload-save-btn').textContent = 'Uploading…';
+
+            const res = await API.workflowCreate(filename, content);
+            $id('wf-upload-save-btn').disabled = false;
+            $id('wf-upload-save-btn').textContent = 'Upload & Save';
+
+            if (res.ok) {
+                closeModal('modal-wf-upload');
+                clearUpload();
+                showToast(`Uploaded ${filename}`, 'success');
+                _fetchWorkflows();
+            } else {
+                showToast(`Upload failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+            }
+        };
+        reader.readAsText(_uploadFile);
     }
 
     // ── Run Modal ─────────────────────────────────────────────────────────────
@@ -342,6 +449,9 @@ const Workflows = (() => {
 
     return {
         load,
+        reload,
+        openNew, saveNew,
+        openUpload, fileSelected, dropFile, clearUpload, uploadSave,
         openRunModal, closeRunModal, submitRun, addParam,
         _deviceKeydown, _removeDevice, _updateParam, _removeParam,
     };
