@@ -591,6 +591,56 @@
 </div>
 
 <!-- ════ WORKFLOW RUN MODAL ════ -->
+<!-- ════ WORKFLOW VIEW MODAL ════ -->
+<div class="modal-overlay" id="wf-view-modal" onclick="event.stopPropagation()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title" id="wf-view-title">View Workflow</div>
+            <button class="modal-close" onclick="closeModal('wf-view-modal')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">File Content</label>
+                <textarea class="form-control" id="wf-view-content" rows="18"
+                    readonly style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('wf-view-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ════ WORKFLOW EDIT MODAL ════ -->
+<div class="modal-overlay" id="wf-edit-modal" onclick="event.stopPropagation()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title" id="wf-edit-title">Edit Workflow</div>
+            <button class="modal-close" onclick="closeModal('wf-edit-modal')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Filename</label>
+                <input type="text" class="form-control" id="wf-edit-filename" disabled>
+                <div class="form-hint">Declare parameters with <code># PARAM: KEY — description</code> in the script header.</div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">File Content</label>
+                <textarea class="form-control" id="wf-edit-content" rows="16"
+                    style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('wf-edit-modal')">Cancel</button>
+            <button class="btn btn-primary" id="wf-edit-save-btn" onclick="Workflows.saveEdit()">Save Workflow</button>
+        </div>
+    </div>
+</div>
+
 <!-- ════ WORKFLOW UPLOAD MODAL ════ -->
 <div class="modal-overlay" id="modal-wf-upload" onclick="event.stopPropagation()">
     <div class="modal" onclick="event.stopPropagation()">

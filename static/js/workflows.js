@@ -76,6 +76,7 @@ const Workflows = (() => {
                         <th>Description</th>
                         <th style="width:90px;text-align:right;">Params</th>
                         <th style="width:160px;">Last Modified</th>
+                        <th style="width:120px;">Actions</th>
                         <th style="width:90px;"></th>
                     </tr>
                 </thead>
@@ -94,6 +95,23 @@ const Workflows = (() => {
                             <td style="color:var(--text-secondary);font-size:12px;">${escHtml(wf.description || '—')}</td>
                             <td style="text-align:right;font-size:13px;">${(wf.parameters || []).length}</td>
                             <td style="font-size:12px;color:var(--text-secondary);">${_fmtTime(wf.modified_at)}</td>
+                            <td>
+                                <div style="display:flex;gap:4px;">
+                                    <button class="btn btn-outline btn-icon" title="View workflow"
+                                        onclick="Workflows.openViewModal('${escHtml(wf.name)}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                    </button>
+                                    <button class="btn btn-outline" style="font-size:12px;padding:5px 10px;"
+                                        title="Edit workflow" onclick="Workflows.openEditModal('${escHtml(wf.name)}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="margin-right:4px;vertical-align:middle;">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>Edit
+                                    </button>
+                                </div>
+                            </td>
                             <td style="text-align:right;">
                                 <button class="btn btn-primary" style="font-size:12px;padding:5px 12px;"
                                     onclick="Workflows.openRunModal('${escHtml(wf.name)}')">
@@ -105,6 +123,57 @@ const Workflows = (() => {
                     `).join('')}
                 </tbody>
             </table>`;
+    }
+
+    // ── View Modal ────────────────────────────────────────────────────────────
+
+    async function openViewModal(name) {
+        $id('wf-view-title').textContent = `View: ${name}`;
+        $id('wf-view-content').value = 'Loading…';
+        openModal('wf-view-modal');
+
+        const res = await API.workflowGet(name);
+        $id('wf-view-content').value = res.ok
+            ? (res.data.raw_content || '')
+            : `# Error: ${res.data?.error || 'Unknown'}`;
+    }
+
+    // ── Edit Modal ────────────────────────────────────────────────────────────
+
+    async function openEditModal(name) {
+        $id('wf-edit-title').textContent = `Edit: ${name}`;
+        $id('wf-edit-filename').value = name;
+        $id('wf-edit-content').value = 'Loading…';
+        $id('wf-edit-save-btn').disabled = true;
+        openModal('wf-edit-modal');
+
+        const res = await API.workflowGet(name);
+        $id('wf-edit-content').value = res.ok
+            ? (res.data.raw_content || '')
+            : `# Error: ${res.data?.error || 'Unknown'}`;
+        $id('wf-edit-save-btn').disabled = false;
+    }
+
+    async function saveEdit() {
+        const name    = $id('wf-edit-filename').value.trim();
+        const content = $id('wf-edit-content').value;
+        if (!name) return;
+
+        $id('wf-edit-save-btn').disabled = true;
+        $id('wf-edit-save-btn').textContent = 'Saving…';
+
+        const res = await API.workflowSave(name, content);
+
+        $id('wf-edit-save-btn').disabled = false;
+        $id('wf-edit-save-btn').textContent = 'Save Workflow';
+
+        if (res.ok) {
+            closeModal('wf-edit-modal');
+            showToast(`Saved ${name}`, 'success');
+            _fetchWorkflows();
+        } else {
+            showToast(`Save failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+        }
     }
 
     // ── Reload All ────────────────────────────────────────────────────────────
@@ -452,6 +521,8 @@ const Workflows = (() => {
         reload,
         openNew, saveNew,
         openUpload, fileSelected, dropFile, clearUpload, uploadSave,
+        openViewModal,
+        openEditModal, saveEdit,
         openRunModal, closeRunModal, submitRun, addParam,
         _deviceKeydown, _removeDevice, _updateParam, _removeParam,
     };
