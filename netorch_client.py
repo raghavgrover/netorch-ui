@@ -327,6 +327,10 @@ def runbook_save(name: str, content: str) -> tuple:
     return _put(f"/runbooks/{name}", {"content": content})
 
 
+def runbook_delete(name: str) -> tuple:
+    return _delete(f"/runbooks/{name}")
+
+
 def runbook_create(filename: str, content: str) -> tuple:
     return _post("/runbooks", {"filename": filename, "content": content})
 
@@ -343,6 +347,10 @@ def workflow_create(filename: str, content: str) -> tuple:
 
 def workflow_save(name: str, content: str) -> tuple:
     return _put(f"/workflows/{name}", {"content": content})
+
+
+def workflow_delete(name: str) -> tuple:
+    return _delete(f"/workflows/{name}")
 
 
 def workflow_get(name: str) -> tuple:

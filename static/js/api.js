@@ -91,12 +91,14 @@ const API = (() => {
     const runbookRun   = (name, payload) => post(`/api/runbooks/${encodeURIComponent(name)}/run`, payload);
     const runbookSave   = (name, content)       => put(`/api/runbooks/${encodeURIComponent(name)}`, { content });
     const runbookCreate = (filename, content)   => post('/api/runbooks', { filename, content });
+    const runbookDelete = (name)                => del(`/api/runbooks/${encodeURIComponent(name)}`);
 
     // ── Workflows ─────────────────────────────────────────────────────────────
     const workflowsList  = ()                   => get('/api/workflows');
     const workflowGet    = (name)               => get(`/api/workflows/${encodeURIComponent(name)}`);
     const workflowSave   = (name, content)      => put(`/api/workflows/${encodeURIComponent(name)}`, { content });
     const workflowCreate = (filename, content)  => post('/api/workflows', { filename, content });
+    const workflowDelete = (name)               => del(`/api/workflows/${encodeURIComponent(name)}`);
 
     return {
         get, post,
@@ -106,7 +108,7 @@ const API = (() => {
         inventoryGroups,
         hosts,
         jobsList, jobGet, jobDetail, jobSubmit, jobCancel, jobLogUrl,
-        runbooksList, runbookGet, runbookRun, runbookSave, runbookCreate,
-        workflowsList, workflowGet, workflowSave, workflowCreate,
+        runbooksList, runbookGet, runbookRun, runbookSave, runbookCreate, runbookDelete,
+        workflowsList, workflowGet, workflowSave, workflowCreate, workflowDelete,
     };
 })();

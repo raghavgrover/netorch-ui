@@ -18,7 +18,7 @@ const Workflows = (() => {
     let _workflowName = null;   // currently-selected workflow for the run modal
     let _devices      = [];
     let _params       = [];     // [{key, value}]
-    let _uploadFile   = null;
+    let _uploadFiles  = [];
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -110,6 +110,13 @@ const Workflows = (() => {
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                         </svg>Edit
                                     </button>
+                                    <button class="btn btn-danger" style="font-size:12px;padding:5px 10px;"
+                                        title="Delete workflow" onclick="Workflows.deleteWorkflow('${escHtml(wf.name)}')">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="margin-right:4px;vertical-align:middle;">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                        </svg>Delete
+                                    </button>
                                 </div>
                             </td>
                             <td style="text-align:right;">
@@ -123,6 +130,19 @@ const Workflows = (() => {
                     `).join('')}
                 </tbody>
             </table>`;
+    }
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    async function deleteWorkflow(name) {
+        if (!confirm(`Delete ${name}?\n\nThis removes the file from /opt/netorch/workflows/ and cannot be undone.`)) return;
+        const res = await API.workflowDelete(name);
+        if (res.ok) {
+            showToast(`Deleted ${name}`, 'info');
+            _fetchWorkflows();
+        } else {
+            showToast(`Delete failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+        }
     }
 
     // ── View Modal ────────────────────────────────────────────────────────────
@@ -221,63 +241,115 @@ const Workflows = (() => {
     // ── Upload Modal ──────────────────────────────────────────────────────────
 
     function openUpload() {
-        _uploadFile = null;
-        $id('wf-upload-preview').style.display = 'none';
+        _uploadFiles = [];
+        $id('wf-upload-list').style.display = 'none';
+        $id('wf-upload-list').innerHTML = '';
         $id('wf-upload-save-btn').disabled = true;
+        $id('wf-upload-save-btn').textContent = 'Upload & Save';
         $id('wf-upload-input').value = '';
         openModal('modal-wf-upload');
     }
 
     function fileSelected(event) {
-        const file = event.target.files[0];
-        if (file) _setUploadFile(file);
+        _addFiles(Array.from(event.target.files));
     }
 
     function dropFile(event) {
         event.preventDefault();
         $id('wf-upload-drop-zone').classList.remove('drag-over');
-        const file = event.dataTransfer.files[0];
-        if (file) _setUploadFile(file);
+        _addFiles(Array.from(event.dataTransfer.files));
     }
 
-    function _setUploadFile(file) {
-        _uploadFile = file;
-        $id('wf-upload-fname').textContent = file.name;
-        $id('wf-upload-fsize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
-        $id('wf-upload-preview').style.display = '';
+    function _addFiles(newFiles) {
+        for (const f of newFiles) {
+            if (f.name.endsWith('.sh') && !_uploadFiles.find(x => x.name === f.name))
+                _uploadFiles.push(f);
+        }
+        _renderUploadList();
+    }
+
+    function _renderUploadList() {
+        const list = $id('wf-upload-list');
+        if (!_uploadFiles.length) {
+            list.style.display = 'none';
+            list.innerHTML = '';
+            $id('wf-upload-save-btn').disabled = true;
+            $id('wf-upload-save-btn').textContent = 'Upload & Save';
+            return;
+        }
+        list.style.display = '';
+        list.innerHTML = _uploadFiles.map((f, i) => `
+            <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="width:15px;height:15px;color:var(--hcl-blue);flex-shrink:0;">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <polyline points="9 11 12 14 22 4"/>
+                </svg>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(f.name)}</div>
+                    <div style="font-size:11px;color:var(--text-secondary);">${(f.size / 1024).toFixed(1)} KB</div>
+                </div>
+                <button class="btn btn-danger btn-icon" onclick="Workflows.removeFile(${i})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>`).join('');
+        const n = _uploadFiles.length;
         $id('wf-upload-save-btn').disabled = false;
+        $id('wf-upload-save-btn').textContent = `Upload & Save (${n})`;
+    }
+
+    function removeFile(i) {
+        _uploadFiles.splice(i, 1);
+        $id('wf-upload-input').value = '';
+        _renderUploadList();
     }
 
     function clearUpload() {
-        _uploadFile = null;
-        $id('wf-upload-preview').style.display = 'none';
+        _uploadFiles = [];
+        $id('wf-upload-list').style.display = 'none';
+        $id('wf-upload-list').innerHTML = '';
         $id('wf-upload-save-btn').disabled = true;
+        $id('wf-upload-save-btn').textContent = 'Upload & Save';
         $id('wf-upload-input').value = '';
     }
 
+    function _readFile(file) {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.readAsText(file);
+        });
+    }
+
     async function uploadSave() {
-        if (!_uploadFile) return;
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const content  = e.target.result;
-            const filename = _uploadFile.name;
-            $id('wf-upload-save-btn').disabled = true;
-            $id('wf-upload-save-btn').textContent = 'Uploading…';
+        if (!_uploadFiles.length) return;
+        const btn = $id('wf-upload-save-btn');
+        btn.disabled = true;
+        btn.textContent = 'Uploading…';
 
-            const res = await API.workflowCreate(filename, content);
-            $id('wf-upload-save-btn').disabled = false;
-            $id('wf-upload-save-btn').textContent = 'Upload & Save';
+        let succeeded = 0;
+        const failures = [];
+        for (const file of _uploadFiles) {
+            const content = await _readFile(file);
+            const res = await API.workflowCreate(file.name, content);
+            if (res.ok) succeeded++;
+            else failures.push(`${file.name}: ${res.data?.detail || res.data?.error || 'error'}`);
+        }
 
-            if (res.ok) {
-                closeModal('modal-wf-upload');
-                clearUpload();
-                showToast(`Uploaded ${filename}`, 'success');
-                _fetchWorkflows();
-            } else {
-                showToast(`Upload failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
-            }
-        };
-        reader.readAsText(_uploadFile);
+        btn.disabled = false;
+        btn.textContent = 'Upload & Save';
+
+        if (!failures.length) {
+            closeModal('modal-wf-upload');
+            clearUpload();
+            showToast(`Uploaded ${succeeded} file${succeeded !== 1 ? 's' : ''}`, 'success');
+            _fetchWorkflows();
+        } else {
+            if (succeeded) showToast(`${succeeded} uploaded, ${failures.length} failed`, 'error');
+            else showToast(`Upload failed: ${failures[0]}`, 'error');
+        }
     }
 
     // ── Run Modal ─────────────────────────────────────────────────────────────
@@ -520,7 +592,8 @@ const Workflows = (() => {
         load,
         reload,
         openNew, saveNew,
-        openUpload, fileSelected, dropFile, clearUpload, uploadSave,
+        openUpload, fileSelected, dropFile, clearUpload, removeFile, uploadSave,
+        deleteWorkflow,
         openViewModal,
         openEditModal, saveEdit,
         openRunModal, closeRunModal, submitRun, addParam,

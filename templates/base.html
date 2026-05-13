@@ -264,7 +264,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Reload All
                     </button>
                     <button class="btn btn-outline" onclick="Runbooks.openUpload()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload File
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Files
                     </button>
                     <button class="btn btn-primary" onclick="Runbooks.openNew()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New File
@@ -285,7 +285,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Reload All
                     </button>
                     <button class="btn btn-outline" onclick="Workflows.openUpload()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload File
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Files
                     </button>
                     <button class="btn btn-primary" onclick="Workflows.openNew()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New File
@@ -424,27 +424,13 @@
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Drop .sh file here</div>
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Drop .sh files here</div>
                 <div style="font-size:12px;">or <span style="color:var(--hcl-blue);cursor:pointer;text-decoration:underline;"
                     onclick="document.getElementById('rb-upload-input').click()">browse</span></div>
-                <input type="file" id="rb-upload-input" accept=".sh" style="display:none;"
+                <input type="file" id="rb-upload-input" accept=".sh" multiple style="display:none;"
                     onchange="Runbooks.fileSelected(event)">
             </div>
-            <div id="rb-upload-preview" style="display:none;margin-top:14px;">
-                <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:6px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="width:18px;height:18px;color:var(--hcl-blue);flex-shrink:0;">
-                        <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
-                    </svg>
-                    <div style="flex:1;">
-                        <div id="rb-upload-fname" style="font-weight:600;font-size:13px;"></div>
-                        <div id="rb-upload-fsize" style="font-size:11px;color:var(--text-secondary);"></div>
-                    </div>
-                    <button class="btn btn-danger btn-icon" onclick="Runbooks.clearUpload()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                </div>
-            </div>
+            <div id="rb-upload-list" style="display:none;margin-top:14px;max-height:220px;overflow-y:auto;"></div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-outline" onclick="closeModal('modal-rb-upload')">Cancel</button>
@@ -660,28 +646,13 @@
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Drop .sh file here</div>
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Drop .sh files here</div>
                 <div style="font-size:12px;">or <span style="color:var(--hcl-blue);cursor:pointer;text-decoration:underline;"
                     onclick="document.getElementById('wf-upload-input').click()">browse</span></div>
-                <input type="file" id="wf-upload-input" accept=".sh" style="display:none;"
+                <input type="file" id="wf-upload-input" accept=".sh" multiple style="display:none;"
                     onchange="Workflows.fileSelected(event)">
             </div>
-            <div id="wf-upload-preview" style="display:none;margin-top:14px;">
-                <div style="background:#f8fafc;border:1px solid var(--border-light);border-radius:6px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        style="width:18px;height:18px;color:var(--hcl-blue);flex-shrink:0;">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <polyline points="9 11 12 14 22 4"/>
-                    </svg>
-                    <div style="flex:1;">
-                        <div id="wf-upload-fname" style="font-weight:600;font-size:13px;"></div>
-                        <div id="wf-upload-fsize" style="font-size:11px;color:var(--text-secondary);"></div>
-                    </div>
-                    <button class="btn btn-danger btn-icon" onclick="Workflows.clearUpload()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                </div>
-            </div>
+            <div id="wf-upload-list" style="display:none;margin-top:14px;max-height:220px;overflow-y:auto;"></div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-outline" onclick="closeModal('modal-wf-upload')">Cancel</button>

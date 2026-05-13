@@ -253,6 +253,12 @@ def api_runbook_put(name: str):
     return jsonify(data), status
 
 
+@app.route("/api/runbooks/<name>", methods=["DELETE"])
+def api_runbook_delete(name: str):
+    data, status = nc.runbook_delete(name)
+    return jsonify(data), status
+
+
 @app.route("/api/runbooks/<name>/run", methods=["POST"])
 def api_runbook_run(name: str):
     payload = request.get_json(silent=True) or {}
@@ -285,6 +291,12 @@ def api_workflow_get(name: str):
 def api_workflow_put(name: str):
     body = request.get_json(silent=True) or {}
     data, status = nc.workflow_save(name, body.get("content", ""))
+    return jsonify(data), status
+
+
+@app.route("/api/workflows/<name>", methods=["DELETE"])
+def api_workflow_delete(name: str):
+    data, status = nc.workflow_delete(name)
     return jsonify(data), status
 
 
