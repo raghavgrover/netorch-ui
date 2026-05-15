@@ -5,13 +5,12 @@
     <div class="form-group">
         <label class="form-label">Job Mode <span class="required">*</span></label>
         <div class="mode-toggle">
-            <button class="mode-btn active" id="mode-audit"     onclick="NewJob.setMode('audit')">Audit (Read-Only)</button>
-            <button class="mode-btn"        id="mode-remediate" onclick="NewJob.setMode('remediate')">Remediate (Write)</button>
-            <button class="mode-btn"        id="mode-runbook"   onclick="NewJob.setMode('runbook')">Execute a Runbook</button>
-            <button class="mode-btn"        id="mode-workflow"  onclick="NewJob.setMode('workflow')">Execute a Workflow</button>
+            <button class="mode-btn active" id="mode-run"      onclick="NewJob.setMode('run')">Run Commands</button>
+            <button class="mode-btn"        id="mode-runbook"  onclick="NewJob.setMode('runbook')">Execute a Runbook</button>
+            <button class="mode-btn"        id="mode-workflow" onclick="NewJob.setMode('workflow')">Execute a Workflow</button>
         </div>
         <div class="form-hint" id="mode-hint" style="margin-top:8px;">
-            Audit mode only reads device state — no configuration changes are made.
+            Run commands on the target devices. Use Commands for exec-mode operations and Config-mode Commands for configuration changes.
         </div>
     </div>
 
@@ -136,19 +135,12 @@
     </div>
     </div><!-- /#commands-transfers-section -->
 
-    <!-- Remediation section (hidden in audit mode) -->
-    <div id="remediate-section" style="display:none;">
+    <!-- Config-mode commands section (shown in run mode) -->
+    <div id="config-mode-section" style="display:none;">
         <hr class="divider">
-        <div class="warn-banner">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-            </svg>
-            <div><strong>Warning:</strong> Remediation commands push configuration changes to devices. These cannot be automatically undone. A config backup is strongly recommended.</div>
-        </div>
         <div class="form-group" style="margin-bottom:0;">
-            <label class="form-label">Remediation Commands</label>
-            <textarea class="form-control" id="job-remediation-commands" rows="5"
+            <label class="form-label">Config-mode Commands</label>
+            <textarea class="form-control" id="job-config-mode-commands" rows="5"
                 placeholder="interface GigabitEthernet0/1&#10; description WAN Link&#10; no shutdown"></textarea>
             <div class="form-hint">Config-mode commands. netorch handles <code>conf t</code> and <code>commit</code>/<code>write mem</code> automatically per platform.</div>
         </div>
@@ -158,7 +150,7 @@
     <hr class="divider" id="options-divider">
     <div id="standard-options" style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
         <label style="font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:7px;cursor:pointer;">
-            <input type="checkbox" id="opt-backup" checked> Backup config before changes
+            <input type="checkbox" id="opt-backup" checked> Backup config before running
         </label>
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
             <label class="form-label" style="margin:0;white-space:nowrap;">Timeout (s)</label>

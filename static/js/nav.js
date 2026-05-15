@@ -10,7 +10,7 @@ const Nav = (() => {
         inventory: { title: 'Inventory',   subtitle: 'Manage inventory files and device sources' },
         hosts:     { title: 'Hosts',       subtitle: 'Browse and inspect all known devices' },
         jobs:      { title: 'Jobs',        subtitle: 'Monitor running and historical jobs' },
-        newjob:    { title: 'New Job',     subtitle: 'Submit a new audit or remediation job' },
+        newjob:    { title: 'New Job',     subtitle: 'Submit a new job on target devices' },
         jobdetail: { title: 'Job Detail',  subtitle: 'Per-device results and live log stream' },
         runbooks:  { title: 'Runbooks',    subtitle: 'Execute predefined command runbooks on devices' },
         workflows: { title: 'Workflows',   subtitle: 'Multi-step orchestration scripts' },

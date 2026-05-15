@@ -58,9 +58,8 @@ function statusBadge(s) {
 }
 
 function modeBadge(m) {
-    return m === 'audit'
-        ? '<span class="badge b-blue">audit</span>'
-        : '<span class="badge b-amber">remediate</span>';
+    if (m === 'workflow') return '<span class="badge b-blue">workflow</span>';
+    return '<span class="badge b-amber">run commands</span>';
 }
 
 function platBadge(p) {

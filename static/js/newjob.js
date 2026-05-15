@@ -2,7 +2,7 @@
  * newjob.js — New Job submission form.
  *
  * Supports:
- *   - Audit / Remediate mode
+ *   - Run Commands mode (exec-mode + config-mode commands)
  *   - Device chip selector (group names or IPs)
  *   - Commands textarea
  *   - File Transfers section: add/remove rows, local path, remote path, post-transfer commands
@@ -16,12 +16,12 @@
  * Validation rules (matching api/routes/jobs.py):
  *   - Devices required always
  *   - At least one of: commands OR file_transfers must be provided
- *   - In remediate mode: remediation_commands OR file_transfers required
+ *   - At least one of: commands, config_mode_commands, or file_transfers required
  */
 'use strict';
 
 const NewJob = (() => {
-    let _mode    = 'audit';
+    let _mode    = 'run';
     let _devices = [];
     let _transferCount = 0;   // monotonic counter for unique row IDs
 
@@ -33,20 +33,20 @@ const NewJob = (() => {
     function onEnter() {
         _loadGroupsDatalist();
         _updateCommandsRequired();
+        setMode(_mode);
     }
 
     // ── Mode ──────────────────────────────────────────────────────────────────
 
     function setMode(m) {
         _mode = m;
-        $id('mode-audit').classList.toggle('active',     m === 'audit');
-        $id('mode-remediate').classList.toggle('active', m === 'remediate');
-        $id('mode-runbook').classList.toggle('active',   m === 'runbook');
-        $id('mode-workflow').classList.toggle('active',  m === 'workflow');  // ← NEW
+        $id('mode-run').classList.toggle('active',      m === 'run');
+        $id('mode-runbook').classList.toggle('active',  m === 'runbook');
+        $id('mode-workflow').classList.toggle('active', m === 'workflow');
 
-        $id('remediate-section').style.display  = m === 'remediate' ? '' : 'none';
-        $id('runbook-section').style.display    = m === 'runbook'   ? '' : 'none';
-        $id('workflow-section').style.display   = m === 'workflow'  ? '' : 'none';  // ← NEW
+        $id('config-mode-section').style.display = m === 'run'      ? '' : 'none';
+        $id('runbook-section').style.display     = m === 'runbook'  ? '' : 'none';
+        $id('workflow-section').style.display    = m === 'workflow' ? '' : 'none';
 
         // Hide commands/transfers sections in runbook and workflow modes
         const cmdTransferSection = $id('commands-transfers-section');
@@ -55,22 +55,21 @@ const NewJob = (() => {
         }
 
         const modeHints = {
-            audit:     'Audit mode only reads device state — no configuration changes are made.',
-            remediate: '⚠ Remediate mode will push configuration changes to devices. Use with caution.',
-            runbook:   'Select a runbook to execute its commands on the targeted devices.',
-            workflow:  'Select a workflow script to run on each targeted device. Workflows can mix local logic with device SSH steps.',  // ← NEW
+            run:      'Run commands on the target devices. Use Commands for exec-mode operations and Config-mode Commands for configuration changes.',
+            runbook:  'Select a runbook to execute its commands on the targeted devices.',
+            workflow: 'Select a workflow script to run on each targeted device. Workflows can mix local logic with device SSH steps.',
         };
         $id('mode-hint').textContent = modeHints[m] || '';
 
         if (m === 'runbook')  _loadRunbooksDropdown();
-        if (m === 'workflow') _loadWorkflowsDropdown();   // ← NEW
+        if (m === 'workflow') _loadWorkflowsDropdown();
 
-        // Relabel submit button for workflow mode
+        // Relabel submit button
         const btn = $id('submit-job-btn');
         if (btn) {
             btn.innerHTML = m === 'workflow'
                 ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 11 12 14 22 4"/></svg> Run Workflow`
-                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Submit Job`;
+                : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Job`;
         }
 
         _updateCommandsRequired();
@@ -399,14 +398,9 @@ const NewJob = (() => {
 
         if (hasTransfers) payload.file_transfers = transfers;
 
-        if (_mode === 'remediate') {
-            const remCmds = $id('job-remediation-commands').value.trim();
-            if (!remCmds && !hasTransfers) {
-                showToast('Remediation commands are required in Remediate mode (or add file transfers)', 'error'); return;
-            }
-            if (remCmds) {
-                payload.remediation_commands = remCmds.split('\n').map(l => l.trim()).filter(Boolean);
-            }
+        const cfgCmds = $id('job-config-mode-commands').value.trim();
+        if (cfgCmds) {
+            payload.config_mode_commands = cfgCmds.split('\n').map(l => l.trim()).filter(Boolean);
         }
 
         const btn = $id('submit-job-btn');
@@ -415,7 +409,7 @@ const NewJob = (() => {
 
         const res = await API.jobSubmit(payload);
         btn.disabled = false;
-        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Submit Job`;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Job`;
 
         if (res.ok) {
             const jobId = res.data.job_id || res.data.id;
@@ -458,7 +452,7 @@ const NewJob = (() => {
 
         const res = await API.runbookRun(rbName, payload);
         btn.disabled = false;
-        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Submit Job`;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run Job`;
 
         if (res.ok) {
             const jobId = res.data.job_id;
@@ -522,13 +516,13 @@ const NewJob = (() => {
     // ── Reset ─────────────────────────────────────────────────────────────────
 
     function reset() {
-        _mode    = 'audit';
+        _mode    = 'run';
         _devices = [];
         _wfParams = [];
-        setMode('audit');
+        setMode('run');
         _renderChips();
-        $id('job-commands').value             = '';
-        $id('job-remediation-commands').value = '';
+        $id('job-commands').value              = '';
+        $id('job-config-mode-commands').value  = '';
         $id('opt-backup').checked             = true;
         $id('opt-timeout').value              = '30';
         $id('opt-workers').value              = '20';
