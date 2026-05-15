@@ -13,7 +13,7 @@ const Nav = (() => {
         newjob:    { title: 'New Job',     subtitle: 'Submit a new job on target devices' },
         jobdetail: { title: 'Job Detail',  subtitle: 'Per-device results and live log stream' },
         runbooks:  { title: 'Runbooks',    subtitle: 'Execute predefined command runbooks on devices' },
-        workflows: { title: 'Workflows',   subtitle: 'Multi-step orchestration scripts' },
+        workflows: { title: 'Workflows',   subtitle: 'YAML-defined multi-step orchestration' },
     };
 
     const history  = [];

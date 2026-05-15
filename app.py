@@ -321,6 +321,12 @@ def api_workflow_log_device(name: str, job_id: str, host: str):
     return jsonify(data), status
 
 
+@app.route("/api/workflows/<name>/steps/<job_id>")
+def api_workflow_steps(name: str, job_id: str):
+    data, status = nc.workflow_steps(name, job_id)
+    return jsonify(data), status
+
+
 # ─── SSE: live job stream ──────────────────────────────────────────────────────
 
 @app.route("/api/stream/jobs/<job_id>")

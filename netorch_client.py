@@ -367,3 +367,7 @@ def workflow_log_all(name: str, job_id: str, since_id: int = 0) -> tuple:
 
 def workflow_log_device(name: str, job_id: str, host: str, since_id: int = 0) -> tuple:
     return _get(f"/workflows/{name}/log/{job_id}/{host}", params={"since_id": since_id})
+
+
+def workflow_steps(name: str, job_id: str) -> tuple:
+    return _get(f"/workflows/{name}/steps/{job_id}")

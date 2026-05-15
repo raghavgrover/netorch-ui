@@ -6,6 +6,7 @@
 <title>BigFix Orchestrator for Network Devices</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
 </head>
 <body>
 
@@ -288,7 +289,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Files
                     </button>
                     <button class="btn btn-primary" onclick="Workflows.openNew()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New File
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Workflow
                     </button>
                 </div>
             </div>
@@ -576,10 +577,9 @@
     </div>
 </div>
 
-<!-- ════ WORKFLOW RUN MODAL ════ -->
 <!-- ════ WORKFLOW VIEW MODAL ════ -->
-<div class="modal-overlay" id="wf-view-modal" onclick="event.stopPropagation()">
-    <div class="modal modal-lg" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="wf-view-modal">
+    <div class="modal" style="max-width:900px;width:80vw;" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title" id="wf-view-title">View Workflow</div>
             <button class="modal-close" onclick="closeModal('wf-view-modal')">
@@ -587,21 +587,33 @@
             </button>
         </div>
         <div class="modal-body">
-            <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">File Content</label>
-                <textarea class="form-control" id="wf-view-content" rows="18"
-                    readonly style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+            <div class="mode-toggle" style="margin-bottom:14px;">
+                <button class="mode-btn active" id="wf-v-btn-code" onclick="Workflows._vMode('code')">&lt; Code &gt;</button>
+                <button class="mode-btn" id="wf-v-btn-steps" onclick="Workflows._vMode('steps')">≡ Steps</button>
+            </div>
+            <div id="wf-v-code-pane">
+                <textarea class="form-control" id="wf-v-ta" rows="22" readonly
+                    style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+            </div>
+            <div id="wf-v-steps-pane" style="display:none;">
+                <div id="wf-v-steps-err" class="warn-banner" style="display:none;"></div>
+                <div id="wf-v-params" style="margin-bottom:12px;"></div>
+                <div id="wf-v-steps"></div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-outline" onclick="closeModal('wf-view-modal')">Close</button>
+            <button class="btn btn-primary" id="wf-v-run-btn" onclick="Workflows._runFromView()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Run
+            </button>
         </div>
     </div>
 </div>
 
 <!-- ════ WORKFLOW EDIT MODAL ════ -->
-<div class="modal-overlay" id="wf-edit-modal" onclick="event.stopPropagation()">
-    <div class="modal modal-lg" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="wf-edit-modal">
+    <div class="modal" style="max-width:900px;width:80vw;" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title" id="wf-edit-title">Edit Workflow</div>
             <button class="modal-close" onclick="closeModal('wf-edit-modal')">
@@ -609,20 +621,25 @@
             </button>
         </div>
         <div class="modal-body">
-            <div class="form-group">
-                <label class="form-label">Filename</label>
-                <input type="text" class="form-control" id="wf-edit-filename" disabled>
-                <div class="form-hint">Declare parameters with <code># PARAM: KEY — description</code> in the script header.</div>
+            <div class="mode-toggle" style="margin-bottom:14px;">
+                <button class="mode-btn active" id="wf-e-btn-code" onclick="Workflows._eMode('code')">&lt; Code &gt;</button>
+                <button class="mode-btn" id="wf-e-btn-steps" onclick="Workflows._eMode('steps')">≡ Steps</button>
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">File Content</label>
-                <textarea class="form-control" id="wf-edit-content" rows="16"
+            <div id="wf-e-code-pane">
+                <textarea class="form-control" id="wf-e-ta" rows="22"
                     style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+            </div>
+            <div id="wf-e-steps-pane" style="display:none;">
+                <div id="wf-e-steps-err" class="warn-banner" style="display:none;"></div>
+                <div id="wf-e-params" style="margin-bottom:12px;"></div>
+                <div id="wf-e-vars" style="margin-bottom:12px;"></div>
+                <div id="wf-e-steps"></div>
+                <div id="wf-e-add-wrap" style="margin-top:12px;"></div>
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-outline" onclick="closeModal('wf-edit-modal')">Cancel</button>
-            <button class="btn btn-primary" id="wf-edit-save-btn" onclick="Workflows.saveEdit()">Save Workflow</button>
+            <button class="btn btn-primary" id="wf-edit-save-btn" onclick="Workflows.saveEdit()">Save</button>
         </div>
     </div>
 </div>
@@ -646,10 +663,10 @@
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Drop .sh files here</div>
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Drop .yaml files here</div>
                 <div style="font-size:12px;">or <span style="color:var(--hcl-blue);cursor:pointer;text-decoration:underline;"
                     onclick="document.getElementById('wf-upload-input').click()">browse</span></div>
-                <input type="file" id="wf-upload-input" accept=".sh" multiple style="display:none;"
+                <input type="file" id="wf-upload-input" accept=".yaml,.yml" multiple style="display:none;"
                     onchange="Workflows.fileSelected(event)">
             </div>
             <div id="wf-upload-list" style="display:none;margin-top:14px;max-height:220px;overflow-y:auto;"></div>
@@ -661,9 +678,9 @@
     </div>
 </div>
 
-<!-- ════ WORKFLOW NEW FILE MODAL ════ -->
-<div class="modal-overlay" id="modal-wf-new" onclick="event.stopPropagation()">
-    <div class="modal modal-lg" onclick="event.stopPropagation()">
+<!-- ════ WORKFLOW NEW MODAL ════ -->
+<div class="modal-overlay" id="modal-wf-new">
+    <div class="modal" style="max-width:900px;width:80vw;" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title">New Workflow</div>
             <button class="modal-close" onclick="closeModal('modal-wf-new')">
@@ -673,14 +690,23 @@
         <div class="modal-body">
             <div class="form-group">
                 <label class="form-label">Filename <span class="required">*</span></label>
-                <input type="text" class="form-control" id="wf-new-filename" placeholder="e.g. add_nad_to_ise.sh">
-                <div class="form-hint">Must end in <code>.sh</code>. Saved to <code>/opt/netorch/workflows/</code></div>
+                <input type="text" class="form-control" id="wf-new-filename" placeholder="e.g. cisco_patch.yaml">
+                <div class="form-hint">Must end in <code>.yaml</code> · Saved to <code>/opt/netorch/workflows/</code></div>
             </div>
-            <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">File Content</label>
-                <textarea class="form-control" id="wf-new-content" rows="14"
-                    style="font-family:monospace;font-size:12px;"
-                    placeholder="#!/bin/bash&#10;# Description of what this workflow does&#10;# PARAM: TARGET_HOST — IP or hostname&#10;&#10;netorch_exec &quot;show version&quot;"></textarea>
+            <div class="mode-toggle" style="margin-bottom:14px;">
+                <button class="mode-btn active" id="wf-n-btn-code" onclick="Workflows._nMode('code')">&lt; Code &gt;</button>
+                <button class="mode-btn" id="wf-n-btn-steps" onclick="Workflows._nMode('steps')">≡ Steps</button>
+            </div>
+            <div id="wf-n-code-pane">
+                <textarea class="form-control" id="wf-n-ta" rows="18"
+                    style="font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+            </div>
+            <div id="wf-n-steps-pane" style="display:none;">
+                <div id="wf-n-steps-err" class="warn-banner" style="display:none;"></div>
+                <div id="wf-n-params" style="margin-bottom:12px;"></div>
+                <div id="wf-n-vars" style="margin-bottom:12px;"></div>
+                <div id="wf-n-steps"></div>
+                <div id="wf-n-add-wrap" style="margin-top:12px;"></div>
             </div>
         </div>
         <div class="modal-footer">
@@ -692,7 +718,7 @@
 
 <!-- ════ WORKFLOW RUN MODAL ════ -->
 <div class="modal-overlay" id="workflow-run-modal" onclick="event.stopPropagation()">
-    <div class="modal" style="max-width:560px;width:100%;">
+    <div class="modal" style="max-width:560px;width:100%;" onclick="event.stopPropagation()">
         <div class="modal-header">
             <h3 class="modal-title" id="wf-run-modal-title">Run Workflow</h3>
             <button class="modal-close" onclick="Workflows.closeRunModal()">
@@ -726,12 +752,7 @@
                         Add
                     </button>
                 </div>
-                <!-- Header -->
-                <div style="display:flex;gap:8px;margin-bottom:4px;padding-right:28px;">
-                    <div style="flex:0 0 150px;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Name</div>
-                    <div style="flex:1;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;">Value</div>
-                </div>
-                <div id="wf-param-rows">
+                <div id="wf-run-params-container">
                     <div style="font-size:12px;color:var(--text-secondary);font-style:italic;padding:4px 0;">
                         No parameters declared.
                     </div>

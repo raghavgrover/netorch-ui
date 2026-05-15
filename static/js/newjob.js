@@ -149,13 +149,13 @@ const NewJob = (() => {
                     const paramCount = (wf.parameters || []).length;
                     hint.textContent = paramCount
                         ? `${paramCount} declared parameter${paramCount !== 1 ? 's' : ''} — fill in values below.`
-                        : 'No parameters declared in script header.';
+                        : 'No parameters declared in workflow YAML.';
                     hint.style.color = 'var(--text-secondary)';
                 }
                 _wfParams = (wf.parameters || []).map(p => ({
-                    key:   p.name,
+                    key:   typeof p === 'string' ? p : (p.name || String(p)),
                     value: '',
-                    hint:  p.description || '',
+                    hint:  '',
                 }));
             } else {
                 _wfParams = [];
