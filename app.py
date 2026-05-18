@@ -107,6 +107,19 @@ def api_discovery_add_to_inventory():
     return jsonify(data), status
 
 
+@app.route("/api/discovery/trigger-scan", methods=["POST"])
+def api_discovery_trigger_scan():
+    body = request.get_json(silent=True) or {}
+    data, status = nc.trigger_discovery_scan(body.get("subnet", ""))
+    return jsonify(data), status
+
+
+@app.route("/api/discovery/config")
+def api_discovery_config():
+    data, status = nc.get_discovery_config()
+    return jsonify(data), status
+
+
 # ─── API proxy: Health ────────────────────────────────────────────────────────
 
 @app.route("/api/health")

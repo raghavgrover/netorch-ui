@@ -462,9 +462,116 @@ const Discovery = (() => {
         }
     }
 
+    // ── Trigger Scan modal ────────────────────────────────────────────────────
+
+    async function openScanModal() {
+        // Reset modal state
+        $id('disc-scan-subnet').value = '';
+        const resultEl = $id('disc-scan-result');
+        if (resultEl) resultEl.style.display = 'none';
+
+        // Restore footer to initial state
+        const footer = $id('disc-scan-footer');
+        if (footer) {
+            footer.innerHTML = `
+                <button class="btn btn-outline" onclick="closeModal('modal-discovery-scan')">Cancel</button>
+                <button class="btn btn-primary" id="disc-scan-submit-btn" onclick="Discovery.submitTriggerScan()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Trigger Scan
+                </button>`;
+        }
+
+        openModal('modal-discovery-scan');
+
+        // Fetch and display scan_point_id
+        const spEl = $id('disc-scan-point-id');
+        if (spEl) spEl.textContent = '…';
+        try {
+            const res = await API.get('/api/discovery/config');
+            if (res.ok) {
+                const scanPointId = res.data.scan_point_id || 0;
+                if (spEl) spEl.textContent = scanPointId || 'not configured';
+
+                // Warn if scan_point_id is 0
+                if (!scanPointId) {
+                    const btn = $id('disc-scan-submit-btn');
+                    if (btn) btn.disabled = true;
+                    const hintEl = $id('disc-scan-hint');
+                    if (hintEl) {
+                        hintEl.innerHTML =
+                            '<span style="color:var(--color-danger,#e53e3e);">⚠ scan_point_id is not configured in netorch.toml — please set it before triggering scans.</span>';
+                    }
+                }
+            }
+        } catch (_) { /* non-fatal */ }
+    }
+
+    async function submitTriggerScan() {
+        const subnet = ($id('disc-scan-subnet')?.value || '').trim();
+
+        // Basic client-side format check
+        if (!subnet || !/^[\d.:/\-]+$/.test(subnet)) {
+            _showScanResult('error', 'Please enter a valid subnet or IP range (e.g. 10.0.1.0/24).');
+            return;
+        }
+
+        const submitBtn  = $id('disc-scan-submit-btn');
+        const cancelBtn  = $id('disc-scan-footer')?.querySelector('.btn-outline');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Triggering…'; }
+        if (cancelBtn) cancelBtn.disabled = true;
+
+        const res = await API.post('/api/discovery/trigger-scan', { subnet });
+
+        if (submitBtn) { submitBtn.disabled = false; }
+        if (cancelBtn) cancelBtn.disabled = false;
+
+        if (!res.ok) {
+            _showScanResult('error', res.data?.detail || res.data?.error || 'Unknown error');
+            if (submitBtn) submitBtn.textContent = '⚡ Trigger Scan';
+            return;
+        }
+
+        if (res.data.error) {
+            _showScanResult('error', res.data.error);
+            if (submitBtn) submitBtn.textContent = '⚡ Trigger Scan';
+            return;
+        }
+
+        // Success
+        const actionId = res.data.action_id;
+        const msg      = res.data.message || 'Scan triggered successfully.';
+        _showScanResult('success', msg, actionId);
+
+        // Replace footer with just Close
+        const footer = $id('disc-scan-footer');
+        if (footer) {
+            footer.innerHTML = `<button class="btn btn-primary" onclick="closeModal('modal-discovery-scan')">Close</button>`;
+        }
+
+        // Toast outside the modal
+        showToast(`Scan triggered for ${subnet}${actionId ? ` (Action ID: ${actionId})` : ''}`, 'success');
+    }
+
+    function _showScanResult(type, msg, actionId) {
+        const el = $id('disc-scan-result');
+        if (!el) return;
+        const isSuccess = type === 'success';
+        const bg     = isSuccess ? '#f0fdf4' : '#fef2f2';
+        const border = isSuccess ? '#86efac' : '#fca5a5';
+        const color  = isSuccess ? '#166534' : '#991b1b';
+        const icon   = isSuccess ? '✓' : '✕';
+        el.style.display = '';
+        el.innerHTML = `
+            <div style="background:${bg};border:1px solid ${border};border-radius:6px;padding:12px 16px;color:${color};font-size:13px;margin-top:4px;">
+                <span style="font-weight:700;margin-right:8px;">${icon}</span>${escHtml(msg)}
+                ${actionId ? `<div style="margin-top:6px;font-size:12px;">BigFix Action ID: <strong>${actionId}</strong></div>` : ''}
+            </div>`;
+    }
+
     return {
         load, applyFilters, sortBy,
         _toggleRow, _toggleAll,
         openAddModal, toggleTarget, submitAddToInventory,
+        openScanModal, submitTriggerScan,
     };
 })();

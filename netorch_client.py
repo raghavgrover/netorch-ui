@@ -383,3 +383,13 @@ def get_discovery_devices() -> tuple:
 def add_discovery_to_inventory(payload: dict) -> tuple:
     """Add selected discovered devices to a netorch inventory file."""
     return _post("/discovery/add-to-inventory", payload)
+
+
+def trigger_discovery_scan(subnet: str) -> tuple:
+    """Create a BigFix Action to run an nmap scan on the Scan Point."""
+    return _post("/discovery/trigger-scan", {"subnet": subnet})
+
+
+def get_discovery_config() -> tuple:
+    """Return non-sensitive BigFix discovery configuration."""
+    return _get("/discovery/config")
