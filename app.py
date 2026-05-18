@@ -87,6 +87,19 @@ def workflows_page():
     return render_template("base.html", initial_view="workflows")
 
 
+@app.route("/discovery")
+def discovery_page():
+    return render_template("base.html", initial_view="discovery")
+
+
+# ─── API proxy: Discovery ─────────────────────────────────────────────────────
+
+@app.route("/api/discovery/devices")
+def api_discovery_devices():
+    data, status = nc.get_discovery_devices()
+    return jsonify(data), status
+
+
 # ─── API proxy: Health ────────────────────────────────────────────────────────
 
 @app.route("/api/health")

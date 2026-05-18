@@ -371,3 +371,10 @@ def workflow_log_device(name: str, job_id: str, host: str, since_id: int = 0) ->
 
 def workflow_steps(name: str, job_id: str) -> tuple:
     return _get(f"/workflows/{name}/steps/{job_id}")
+
+
+# ─── Discovery ────────────────────────────────────────────────────────────────
+
+def get_discovery_devices() -> tuple:
+    """Fetch BigFix unmanaged assets via the discovery endpoint."""
+    return _get("/discovery/devices")
