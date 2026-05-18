@@ -286,6 +286,10 @@
             <div class="grid-toolbar">
                 <div class="grid-toolbar-left"><span id="disc-status"></span></div>
                 <div class="grid-toolbar-right">
+                    <button class="btn btn-outline" id="disc-add-btn" disabled
+                        onclick="Discovery.openAddModal()">
+                        📥 Add to Inventory
+                    </button>
                     <button class="btn btn-outline" onclick="Discovery.load()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh
                     </button>
@@ -441,6 +445,68 @@
 </div>
 
 <!-- Toast container -->
+
+<!-- ════ DISCOVERY ADD-TO-INVENTORY MODAL ════ -->
+<div class="modal-overlay" id="modal-discovery-add" onclick="event.stopPropagation()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title">Add to Inventory</div>
+            <button class="modal-close" onclick="closeModal('modal-discovery-add')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+
+            <!-- Selected devices -->
+            <div class="form-group">
+                <label class="form-label">Selected Devices</label>
+                <div id="disc-add-devices-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border-light);border-radius:6px;"></div>
+            </div>
+
+            <!-- Target file -->
+            <div class="form-group">
+                <label class="form-label">Target Inventory File</label>
+                <div style="display:flex;gap:16px;margin-bottom:10px;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="radio" name="disc-add-target" value="existing" id="disc-radio-existing" checked
+                            onchange="Discovery.toggleTarget()"> Existing file
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="radio" name="disc-add-target" value="new" id="disc-radio-new"
+                            onchange="Discovery.toggleTarget()"> New file
+                    </label>
+                </div>
+                <div id="disc-add-existing-wrap">
+                    <select class="form-control" id="disc-add-file-select" style="font-size:13px;">
+                        <option value="">Loading inventory files…</option>
+                    </select>
+                </div>
+                <div id="disc-add-new-wrap" style="display:none;">
+                    <input type="text" class="form-control" id="disc-add-new-filename"
+                        placeholder="e.g. discovered_devices.ini" style="font-size:13px;">
+                    <div class="form-hint">Must end in <code>.ini</code></div>
+                </div>
+            </div>
+
+            <!-- Group name -->
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">Group Name</label>
+                <input type="text" class="form-control" id="disc-add-group"
+                    placeholder="e.g. discovered_2026" style="font-size:13px;">
+                <div class="form-hint">Hosts will be added under this INI section heading. Letters, digits, underscores, hyphens only.</div>
+                <div id="disc-add-group-err" style="display:none;color:var(--color-danger,#e53e3e);font-size:12px;margin-top:4px;"></div>
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <div id="disc-add-modal-err" style="flex:1;font-size:12px;color:var(--color-danger,#e53e3e);display:none;"></div>
+            <button class="btn btn-outline" onclick="closeModal('modal-discovery-add')">Cancel</button>
+            <button class="btn btn-primary" id="disc-add-submit-btn" onclick="Discovery.submitAddToInventory()">
+                Add Devices
+            </button>
+        </div>
+    </div>
+</div>
 <div id="toast-container"></div>
 
 <!-- ════ RUNBOOK UPLOAD MODAL ════ -->

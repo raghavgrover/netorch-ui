@@ -378,3 +378,8 @@ def workflow_steps(name: str, job_id: str) -> tuple:
 def get_discovery_devices() -> tuple:
     """Fetch BigFix unmanaged assets via the discovery endpoint."""
     return _get("/discovery/devices")
+
+
+def add_discovery_to_inventory(payload: dict) -> tuple:
+    """Add selected discovered devices to a netorch inventory file."""
+    return _post("/discovery/add-to-inventory", payload)

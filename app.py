@@ -100,6 +100,13 @@ def api_discovery_devices():
     return jsonify(data), status
 
 
+@app.route("/api/discovery/add-to-inventory", methods=["POST"])
+def api_discovery_add_to_inventory():
+    payload = request.get_json(silent=True) or {}
+    data, status = nc.add_discovery_to_inventory(payload)
+    return jsonify(data), status
+
+
 # ─── API proxy: Health ────────────────────────────────────────────────────────
 
 @app.route("/api/health")
