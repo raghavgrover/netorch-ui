@@ -195,15 +195,15 @@ const Discovery = (() => {
     // ── Table render ──────────────────────────────────────────────────────────
 
     const _COLS = [
-        { key: 'ip',                label: 'IP Address',   width: '' },
+        { key: 'ip',                label: 'IP Address',   width: '130px' },
         { key: 'hostname',          label: 'Hostname',     width: '' },
-        { key: 'mac',               label: 'MAC Address',  width: '150px' },
-        { key: 'device_type',       label: 'Device Type',  width: '120px' },
-        { key: 'os',                label: 'OS',           width: '' },
-        { key: 'open_ports',        label: 'Open Ports',   width: '140px' },
-        { key: 'inferred_platform', label: 'Platform',     width: '130px' },
-        { key: 'in_inventory',      label: 'In Inventory', width: '110px' },
-        { key: 'scan_time',         label: 'Scan Time',    width: '160px' },
+        { key: 'mac',               label: 'MAC Address',  width: '145px' },
+        { key: 'device_type',       label: 'Device Type',  width: '110px' },
+        { key: 'os',                label: 'OS',           width: '140px' },
+        { key: 'open_ports',        label: 'Scan Point',   width: '145px' },
+        { key: 'inferred_platform', label: 'Platform',     width: '110px' },
+        { key: 'in_inventory',      label: 'In Inventory', width: '100px' },
+        { key: 'scan_time',         label: 'Scan Time',    width: '175px' },
     ];
 
     function _arrow(col) {
@@ -264,23 +264,25 @@ const Discovery = (() => {
                     onchange="Discovery._toggleRow('${escHtml(d.ip)}', this.checked)"></td>
                 <td style="font-weight:600;font-family:monospace;">${escHtml(d.ip)}</td>
                 <td style="font-size:12px;">${escHtml(d.hostname || '—')}</td>
-                <td style="font-size:12px;font-family:monospace;color:var(--text-secondary);">${escHtml(d.mac || '—')}</td>
-                <td style="font-size:12px;">${escHtml(d.device_type || '—')}</td>
-                <td style="font-size:12px;">${escHtml(d.os || '—')}</td>
-                <td style="font-size:11px;color:var(--text-secondary);">${escHtml(d.open_ports || '—')}</td>
+                <td style="font-size:12px;font-family:monospace;color:var(--text-secondary);white-space:nowrap;">${escHtml(d.mac || '—')}</td>
+                <td style="font-size:12px;white-space:nowrap;">${escHtml(d.device_type || '—')}</td>
+                <td style="font-size:12px;white-space:nowrap;">${escHtml(d.os || '—')}</td>
+                <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;">${escHtml(d.open_ports || '—')}</td>
                 <td>${_platformBadge(d.inferred_platform)}</td>
                 <td style="text-align:center;">${d.in_inventory
                     ? '<span class="badge b-green" style="font-size:11px;">✓ Yes</span>'
                     : ''}</td>
-                <td style="font-size:11px;color:var(--text-secondary);">${escHtml(d.scan_time || '—')}</td>
+                <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(d.scan_time || '')}">${escHtml(d.scan_time || '—')}</td>
             </tr>`;
         }).join('');
 
         wrap.innerHTML = `
-            <table class="data-table">
-                <thead><tr>${headers}</tr></thead>
-                <tbody>${rows}</tbody>
-            </table>`;
+            <div style="overflow-x:auto;">
+                <table class="data-table" style="min-width:900px;">
+                    <thead><tr>${headers}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
 
         // Restore indeterminate state on header checkbox
         const headerCb = $id('disc-cb-all');
