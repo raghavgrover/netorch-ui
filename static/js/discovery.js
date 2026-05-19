@@ -201,9 +201,11 @@ const Discovery = (() => {
         { key: 'device_type',       label: 'Device Type',  width: '110px' },
         { key: 'os',                label: 'OS',           width: '140px' },
         { key: 'open_ports',        label: 'Scan Point',   width: '145px' },
-        { key: 'inferred_platform', label: 'Platform',     width: '110px' },
-        { key: 'in_inventory',      label: 'In Inventory', width: '100px' },
-        { key: 'scan_time',         label: 'Scan Time',    width: '175px' },
+        { key: 'inferred_platform', label: 'Platform',        width: '110px' },
+        { key: 'in_inventory',      label: 'In Inventory',   width: '100px' },
+        { key: 'inventory_file',    label: 'Inventory Name', width: '140px' },
+        { key: 'inventory_group',   label: 'Group',          width: '120px' },
+        { key: 'scan_time',         label: 'Scan Time',      width: '175px' },
     ];
 
     function _arrow(col) {
@@ -272,7 +274,9 @@ const Discovery = (() => {
                 <td style="text-align:center;">${d.in_inventory
                     ? '<span class="badge b-green" style="font-size:11px;">✓ Yes</span>'
                     : ''}</td>
-                <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(d.scan_time || '')}">${escHtml(d.scan_time || '—')}</td>
+                <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;" title="${escHtml(d.inventory_file || '')}">${escHtml(d.inventory_file || '—')}</td>
+                <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;" title="${escHtml(d.inventory_group || '')}">${escHtml(d.inventory_group || '—')}</td>
+                <td style="font-size:11px;color:var(--text-secondary);white-space:nowrap;max-width:175px;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(d.scan_time || '')}">${escHtml(d.scan_time || '—')}</td>
             </tr>`;
         }).join('');
 
