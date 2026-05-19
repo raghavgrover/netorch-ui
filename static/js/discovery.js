@@ -294,10 +294,28 @@ const Discovery = (() => {
     async function openAddModal() {
         if (_selected.size === 0) return;
 
-        // Default group name: discovered_YYYY-MM-DD
-        const today = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+        // Pre-check: warn if any selected device is already in inventory
+        const alreadyIn = _devices.filter(d => _selected.has(d.ip) && d.in_inventory);
+        if (alreadyIn.length > 0) {
+            const listEl = $id('disc-warn-host-list');
+            if (listEl) {
+                listEl.innerHTML = alreadyIn
+                    .map(d => `<div>• <strong>${escHtml(d.ip)}</strong>${d.hostname && d.hostname !== 'n/a' ? ` (${escHtml(d.hostname)})` : ''}</div>`)
+                    .join('');
+            }
+            openModal('modal-discovery-warn');
+            return;   // wait for user to confirm via _proceedAddModal()
+        }
+
+        _proceedAddModal();
+    }
+
+    async function _proceedAddModal() {
+        closeModal('modal-discovery-warn');
+
+        // Group name is optional — clear the field (blank = ungrouped)
         const groupInput = $id('disc-add-group');
-        if (groupInput) groupInput.value = `discovered_${today}`;
+        if (groupInput) groupInput.value = '';
 
         // Reset radio to "existing"
         const radioExisting = $id('disc-radio-existing');
@@ -380,14 +398,56 @@ const Discovery = (() => {
         sel.innerHTML = sources.map(s =>
             `<option value="${escHtml(s.file)}">${escHtml(s.file)} (${s.hosts} hosts)</option>`
         ).join('');
+        sel.onchange = async () => {
+            await _loadGroupsForFile(sel.value);
+        };
+        // Load groups for the initially selected file
+        await _loadGroupsForFile(sel.value);
     }
 
-    function toggleTarget() {
+    async function _loadGroupsForFile(filename) {
+        const groupSel = $id('disc-add-group-select');
+        if (!groupSel) return;
+        groupSel.innerHTML = '<option value="">Loading groups…</option>';
+
+        if (!filename) {
+            groupSel.innerHTML = '<option value="__new__">+ New group…</option>';
+            _onGroupSelectChange();
+            return;
+        }
+
+        const res = await API.get(`/api/discovery/inventory-groups?file=${encodeURIComponent(filename)}`);
+        const groups = (res.ok && res.data.groups) ? res.data.groups : [];
+
+        groupSel.innerHTML =
+            groups.map(g => `<option value="${escHtml(g)}">${escHtml(g)}</option>`).join('') +
+            '<option value="__new__">+ New group…</option>';
+
+        // Default to [ungrouped] if it exists, otherwise first group
+        const ungrouped = groups.find(g => g.toLowerCase() === 'ungrouped');
+        groupSel.value = ungrouped || (groups[0] || '__new__');
+        _onGroupSelectChange();
+    }
+
+    function _onGroupSelectChange() {
+        const sel   = $id('disc-add-group-select');
+        const wrap  = $id('disc-add-new-group-wrap');
+        const input = $id('disc-add-group-new-input');
+        if (!sel || !wrap) return;
+        const isNew = sel.value === '__new__';
+        wrap.style.display = isNew ? '' : 'none';
+        if (isNew && input) input.focus();
+    }
+
+    async function toggleTarget() {
         const isExisting = $id('disc-radio-existing')?.checked;
         const existingWrap = $id('disc-add-existing-wrap');
         const newWrap      = $id('disc-add-new-wrap');
         if (existingWrap) existingWrap.style.display = isExisting ? '' : 'none';
         if (newWrap)      newWrap.style.display      = isExisting ? 'none' : '';
+        // Reload group list when target changes
+        const fname = isExisting ? ($id('disc-add-file-select')?.value || '') : '';
+        await _loadGroupsForFile(fname);
     }
 
     async function submitAddToInventory() {
@@ -407,7 +467,16 @@ const Discovery = (() => {
             }));
 
         const isExisting = $id('disc-radio-existing')?.checked;
-        const groupName  = ($id('disc-add-group')?.value || '').trim();
+
+        // Resolve group name from dropdown or new-group input
+        const groupSel   = $id('disc-add-group-select');
+        const groupSelVal = groupSel?.value || '';
+        let groupName = '';
+        if (groupSelVal === '__new__') {
+            groupName = ($id('disc-add-group-new-input')?.value || '').trim();
+        } else {
+            groupName = groupSelVal;
+        }
 
         // Client-side validation
         const groupErr = $id('disc-add-group-err');
@@ -415,7 +484,8 @@ const Discovery = (() => {
         if (groupErr) groupErr.style.display = 'none';
         if (modalErr) modalErr.style.display = 'none';
 
-        if (!groupName || !/^[a-zA-Z0-9_-]+$/.test(groupName)) {
+        // Validate new group name format if user typed one
+        if (groupSelVal === '__new__' && groupName && !/^[a-zA-Z0-9_-]+$/.test(groupName)) {
             if (groupErr) {
                 groupErr.textContent = 'Group name must contain only letters, digits, underscores, or hyphens.';
                 groupErr.style.display = '';
@@ -573,7 +643,8 @@ const Discovery = (() => {
     return {
         load, applyFilters, sortBy,
         _toggleRow, _toggleAll,
-        openAddModal, toggleTarget, submitAddToInventory,
+        openAddModal, _proceedAddModal, toggleTarget, submitAddToInventory,
+        _onGroupSelectChange,
         openScanModal, submitTriggerScan,
     };
 })();

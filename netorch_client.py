@@ -380,6 +380,10 @@ def get_discovery_devices() -> tuple:
     return _get("/discovery/devices")
 
 
+def get_discovery_inventory_groups(filename: str) -> tuple:
+    return _get("/discovery/inventory-groups", params={"file": filename})
+
+
 def add_discovery_to_inventory(payload: dict) -> tuple:
     """Add selected discovered devices to a netorch inventory file."""
     return _post("/discovery/add-to-inventory", payload)

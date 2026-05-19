@@ -449,6 +449,39 @@
 
 <!-- Toast container -->
 
+<!-- ════ DISCOVERY DUPLICATE-HOST WARNING MODAL ════ -->
+<div class="modal-overlay" id="modal-discovery-warn" onclick="event.stopPropagation()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
+        <div class="modal-header">
+            <div class="modal-title">Already in Inventory</div>
+            <button class="modal-close" onclick="closeModal('modal-discovery-warn')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" width="24" height="24" style="flex-shrink:0;margin-top:2px;">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <div>
+                    <p style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:6px;">
+                        One or more selected hosts are already present in the inventory.
+                    </p>
+                    <div id="disc-warn-host-list" style="font-size:12px;color:var(--text-secondary);line-height:1.8;"></div>
+                    <p style="font-size:13px;color:var(--text-secondary);margin-top:10px;">
+                        Adding them again may create duplicate entries. Do you want to proceed?
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('modal-discovery-warn')">Cancel</button>
+            <button class="btn btn-primary" onclick="Discovery._proceedAddModal()">Still Proceed</button>
+        </div>
+    </div>
+</div>
+
 <!-- ════ DISCOVERY ADD-TO-INVENTORY MODAL ════ -->
 <div class="modal-overlay" id="modal-discovery-add" onclick="event.stopPropagation()">
     <div class="modal modal-lg" onclick="event.stopPropagation()">
@@ -491,12 +524,18 @@
                 </div>
             </div>
 
-            <!-- Group name -->
+            <!-- Group name — dropdown of existing groups OR new group -->
             <div class="form-group" style="margin-bottom:0;">
-                <label class="form-label">Group Name</label>
-                <input type="text" class="form-control" id="disc-add-group"
-                    placeholder="e.g. discovered_2026" style="font-size:13px;">
-                <div class="form-hint">Hosts will be added under this INI section heading. Letters, digits, underscores, hyphens only.</div>
+                <label class="form-label">Group</label>
+                <select class="form-control" id="disc-add-group-select" style="font-size:13px;"
+                    onchange="Discovery._onGroupSelectChange()">
+                    <option value="">-- Loading groups… --</option>
+                </select>
+                <div id="disc-add-new-group-wrap" style="display:none;margin-top:8px;">
+                    <input type="text" class="form-control" id="disc-add-group-new-input"
+                        placeholder="e.g. discovered_2026" style="font-size:13px;">
+                    <div class="form-hint">New section name. Letters, digits, underscores, hyphens only.</div>
+                </div>
                 <div id="disc-add-group-err" style="display:none;color:var(--color-danger,#e53e3e);font-size:12px;margin-top:4px;"></div>
             </div>
 

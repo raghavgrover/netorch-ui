@@ -100,6 +100,13 @@ def api_discovery_devices():
     return jsonify(data), status
 
 
+@app.route("/api/discovery/inventory-groups")
+def api_discovery_inventory_groups():
+    fname = request.args.get("file", "")
+    data, status = nc.get_discovery_inventory_groups(fname)
+    return jsonify(data), status
+
+
 @app.route("/api/discovery/add-to-inventory", methods=["POST"])
 def api_discovery_add_to_inventory():
     payload = request.get_json(silent=True) or {}
