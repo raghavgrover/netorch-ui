@@ -543,6 +543,9 @@ const Discovery = (() => {
     async function openScanModal() {
         // Reset modal state
         $id('disc-scan-subnet').value = '';
+        // Reset to local subnet scan each time
+        const localRadio = $id('disc-scan-type-local');
+        if (localRadio) { localRadio.checked = true; _onScanTypeChange(); }
         const resultEl = $id('disc-scan-result');
         if (resultEl) resultEl.style.display = 'none';
 
@@ -582,12 +585,18 @@ const Discovery = (() => {
         } catch (_) { /* non-fatal */ }
     }
 
-    async function submitTriggerScan() {
-        const subnet = ($id('disc-scan-subnet')?.value || '').trim();
+    function _onScanTypeChange() {
+        const isRange = $id('disc-scan-type-range')?.checked;
+        const wrap = $id('disc-scan-subnet-wrap');
+        if (wrap) wrap.style.display = isRange ? '' : 'none';
+    }
 
-        // Basic client-side format check
-        if (!subnet || !/^[\d.:/\-]+$/.test(subnet)) {
-            _showScanResult('error', 'Please enter a valid subnet or IP range (e.g. 10.0.1.0/24).');
+    async function submitTriggerScan() {
+        const scanType = $id('disc-scan-type-range')?.checked ? 'range' : 'local';
+        const subnet   = ($id('disc-scan-subnet')?.value || '').trim();
+
+        if (scanType === 'range' && (!subnet || !/^[\d.:/\-]+$/.test(subnet))) {
+            _showScanResult('error', 'Please enter a valid subnet or IP range (e.g. 192.168.138.0/24).');
             return;
         }
 
@@ -596,7 +605,7 @@ const Discovery = (() => {
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Triggering…'; }
         if (cancelBtn) cancelBtn.disabled = true;
 
-        const res = await API.post('/api/discovery/trigger-scan', { subnet });
+        const res = await API.post('/api/discovery/trigger-scan', { scan_type: scanType, subnet });
 
         if (submitBtn) { submitBtn.disabled = false; }
         if (cancelBtn) cancelBtn.disabled = false;
@@ -649,6 +658,6 @@ const Discovery = (() => {
         _toggleRow, _toggleAll,
         openAddModal, _proceedAddModal, toggleTarget, submitAddToInventory,
         _onGroupSelectChange,
-        openScanModal, submitTriggerScan,
+        openScanModal, submitTriggerScan, _onScanTypeChange,
     };
 })();

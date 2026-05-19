@@ -572,16 +572,40 @@
                 </div>
             </div>
 
-            <!-- Subnet input -->
+            <!-- Scan type -->
             <div class="form-group">
+                <label class="form-label">Scan Type</label>
+                <div style="display:flex;gap:16px;">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="radio" name="disc-scan-type" value="local" id="disc-scan-type-local" checked
+                            onchange="Discovery._onScanTypeChange()">
+                        <div>
+                            <div style="font-weight:600;">Local Subnet (auto)</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Scans all subnets connected to the Scan Point</div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input type="radio" name="disc-scan-type" value="range" id="disc-scan-type-range"
+                            onchange="Discovery._onScanTypeChange()">
+                        <div>
+                            <div style="font-weight:600;">Custom IP Range</div>
+                            <div style="font-size:11px;color:var(--text-secondary);">Specify a subnet or IP range to scan</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Subnet input (shown only for custom range) -->
+            <div class="form-group" id="disc-scan-subnet-wrap" style="display:none;">
                 <label class="form-label">Subnet / IP Range <span class="required">*</span></label>
                 <input type="text" class="form-control" id="disc-scan-subnet"
-                    placeholder="e.g. 10.0.1.0/24 or 192.168.1.1-254"
+                    placeholder="e.g. 192.168.138.0/24 or 192.168.1.1-254"
                     style="font-family:monospace;">
-                <div class="form-hint" id="disc-scan-hint">
-                    CIDR notation or range. Scanned from BigFix Scan Point
-                    (Computer ID: <span id="disc-scan-point-id">—</span>).
-                </div>
+                <div class="form-hint">CIDR notation or range (e.g. 192.168.100.1-254).</div>
+            </div>
+
+            <div class="form-hint" id="disc-scan-hint" style="margin-top:-8px;margin-bottom:12px;">
+                Scan Point: <span id="disc-scan-point-id">—</span>
             </div>
 
             <!-- Result area (hidden until response) -->
