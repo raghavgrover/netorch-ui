@@ -25,6 +25,20 @@ const Discovery = (() => {
     async function load() {
         _selected.clear();
         _updateAddBtn();
+
+        // If we already have data, render from cache immediately — no round-trip to BigFix.
+        // The Refresh button calls _fetchWorkflows() directly to force a re-fetch.
+        if (_devices.length > 0) {
+            _populateFilterDropdowns();
+            applyFilters();
+            _updateStatus();
+            return;
+        }
+
+        await _fetchWorkflows();
+    }
+
+    async function _fetchWorkflows() {
         const wrap = $id('disc-table-wrap');
         if (wrap) wrap.innerHTML = '<div class="loading-row">Querying BigFix Asset Discovery…</div>';
         _setStatus('Fetching…', '');
@@ -654,7 +668,7 @@ const Discovery = (() => {
     }
 
     return {
-        load, applyFilters, sortBy,
+        load, refresh: _fetchWorkflows, applyFilters, sortBy,
         _toggleRow, _toggleAll,
         openAddModal, _proceedAddModal, toggleTarget, submitAddToInventory,
         _onGroupSelectChange,
