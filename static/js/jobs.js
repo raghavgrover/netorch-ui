@@ -180,9 +180,11 @@ const Jobs = (() => {
 
     function _renderDetail(jobId, job, detail) {
         const container = $id('jobdetail-content');
-        const pct     = job.total > 0 ? Math.round((job.progress / job.total) * 100) : 0;
-        const devices = detail?.devices || [];
-        const isRunning = job.status === 'running';
+        const pct       = job.total > 0 ? Math.round((job.progress / job.total) * 100) : 0;
+        const devices   = detail?.devices || [];
+        const steps     = detail?.steps   || [];
+        const isWorkflow = job.mode === 'workflow';
+        const isRunning  = job.status === 'running';
 
         container.innerHTML = `
             <!-- Summary card -->
@@ -254,14 +256,18 @@ const Jobs = (() => {
 
             <!-- Actions bar -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <div class="dash-header-title" style="margin:0;border:none;padding:0;">Per-Device Results</div>
+                <div class="dash-header-title" style="margin:0;border:none;padding:0;">
+                    ${isWorkflow ? 'Step Results' : 'Per-Device Results'}
+                </div>
                 <div style="display:flex;gap:8px;" id="jd-actions">
                     ${_actionsHtml(jobId, job.status)}
                 </div>
             </div>
 
-            <!-- Device accordion -->
-            <div id="jd-devices">${_devicesHtml(devices)}</div>`;
+            <!-- Results: step-by-step for workflow, per-device accordion for others -->
+            <div id="jd-devices">
+                ${isWorkflow ? _stepsHtml(steps, devices) : _devicesHtml(devices)}
+            </div>`;
     }
 
     function _actionsHtml(jobId, status) {
@@ -280,6 +286,106 @@ const Jobs = (() => {
                         Refresh Results
                    </button>`
             }`;
+    }
+
+    // ── Workflow step-by-step results ─────────────────────────────────────────
+
+    function _stepsHtml(steps, devices) {
+        if (!steps.length && !devices.length) {
+            return '<div class="empty-state"><p>No step results yet.</p></div>';
+        }
+
+        // Build a set of step names already covered by workflow_step_outputs
+        const coveredSteps = new Set(steps.map(s => s.step_name));
+
+        // Also include device-scoped steps that ONLY appear in devices (not in step_outputs)
+        // This handles older jobs or edge cases
+        const allSteps = [...steps];
+        const deviceStepNames = new Set(
+            devices.flatMap(d => (d.output || [])
+                .filter(l => l.startsWith('# [step:'))
+                .map(l => l.replace(/^# \[step:/, '').replace(/\]$/, ''))
+            )
+        );
+        deviceStepNames.forEach(name => {
+            if (!coveredSteps.has(name)) {
+                // Build a synthetic step entry from device outputs
+                const devEntries = devices.map(d => {
+                    const lines = d.output || [];
+                    const start = lines.findIndex(l => l === `# [step:${name}]`);
+                    if (start === -1) return null;
+                    const relevant = [];
+                    for (let i = start + 1; i < lines.length; i++) {
+                        if (lines[i].startsWith('# [step:')) break;
+                        relevant.push(lines[i]);
+                    }
+                    return { host: d.host, output: relevant, exit_code: d.status === 'success' ? 0 : 1, status: d.status };
+                }).filter(Boolean);
+                allSteps.push({ step_name: name, devices: devEntries, once_output: null, once_exit_code: null });
+            }
+        });
+
+        if (!allSteps.length) {
+            return '<div class="empty-state"><p>No step results available.</p></div>';
+        }
+
+        return allSteps.map((step, idx) => {
+            const isOnce   = step.once_output !== null;
+            const hasDevs  = step.devices && step.devices.length > 0;
+            const allOk    = isOnce
+                ? step.once_exit_code === 0
+                : hasDevs && step.devices.every(d => d.exit_code === 0);
+            const anyFail  = isOnce
+                ? step.once_exit_code !== 0
+                : hasDevs && step.devices.some(d => d.exit_code !== 0);
+            const stepStatus = !isOnce && !hasDevs ? 'skipped'
+                : anyFail ? 'failed'
+                : allOk   ? 'success'
+                : 'partial';
+            const statusBadge = {
+                success: '<span class="badge b-green" style="font-size:11px;">✓ success</span>',
+                failed:  '<span class="badge b-red"   style="font-size:11px;">✕ failed</span>',
+                partial: '<span class="badge b-amber" style="font-size:11px;">⚠ partial</span>',
+                skipped: '<span class="badge b-grey"  style="font-size:11px;">— skipped</span>',
+            }[stepStatus] || '';
+            const stepType = isOnce ? 'shell/once' : hasDevs ? 'per-device' : 'skipped';
+
+            let body = '';
+            if (isOnce) {
+                const lines = (step.once_output || '').split('\n').map(coloriseLine).join('');
+                const errCls = step.once_exit_code !== 0 ? ';border-left:3px solid var(--status-red)' : '';
+                body = `<div class="log-block" style="margin-top:10px${errCls}">${lines || '<span style="opacity:.5;">(no output)</span>'}</div>`;
+            } else if (hasDevs) {
+                body = step.devices.map(dv => {
+                    const lines = (dv.output || []).map(coloriseLine).join('');
+                    const hdr   = dv.exit_code === 0
+                        ? `<span style="color:var(--status-green);">✓</span>`
+                        : `<span style="color:var(--status-red);">✕</span>`;
+                    return `
+                        <div style="margin-top:8px;">
+                            <div style="font-size:12px;font-weight:600;font-family:monospace;color:var(--text-secondary);margin-bottom:4px;">
+                                ${hdr} ${escHtml(dv.host)}
+                            </div>
+                            <div class="log-block">${lines || '<span style="opacity:.5;">(no output)</span>'}</div>
+                        </div>`;
+                }).join('');
+            } else {
+                body = `<div style="font-size:12px;color:var(--text-secondary);font-style:italic;margin-top:8px;">Step skipped — all devices were already marked failed by a previous step.</div>`;
+            }
+
+            return `
+                <div class="section-card" style="margin-bottom:12px;padding:14px 18px;">
+                    <div style="display:flex;align-items:center;gap:10px;cursor:pointer;"
+                         onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'">
+                        <span style="font-size:13px;font-weight:700;color:var(--text-secondary);flex-shrink:0;">Step ${idx + 1}</span>
+                        <span style="font-size:14px;font-weight:600;flex:1;">${escHtml(step.step_name)}</span>
+                        <span style="font-size:11px;color:var(--text-secondary);background:var(--bg-hover);padding:2px 8px;border-radius:4px;white-space:nowrap;">${stepType}</span>
+                        ${statusBadge}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="flex-shrink:0;opacity:.4;"><polyline points="6 9 12 15 18 9"/></svg>
+                    </div>
+                    <div>${body}</div>
+                </div>`;
+        }).join('');
     }
 
     function _deviceOutputHtml(d) {
