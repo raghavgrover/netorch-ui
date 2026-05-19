@@ -100,6 +100,20 @@ def _delete(path: str) -> tuple[Any, int]:
         return {"error": str(e)}, 502
 
 
+def _delete_with_body(path: str, body: dict) -> tuple[Any, int]:
+    try:
+        r = requests.delete(
+            _url(path),
+            headers=cfg.netorch.headers,
+            json=body,
+            timeout=cfg.netorch.request_timeout,
+        )
+        return r.json(), r.status_code
+    except RequestException as e:
+        log.error("netorch DELETE %s failed: %s", path, e)
+        return {"error": str(e)}, 502
+
+
 # ─── Health ───────────────────────────────────────────────────────────────────
 
 def health() -> tuple[Any, int]:
@@ -152,6 +166,11 @@ def inventory_source_delete(filename: str) -> tuple[Any, int]:
     if status == 200:
         _inv_cache.clear()
     return data, status
+
+
+def inventory_delete_hosts(hosts: list) -> tuple[Any, int]:
+    """Remove a list of host IPs from all inventory files."""
+    return _delete_with_body("/inventory/hosts", {"hosts": hosts})
 
 
 def inventory_reload() -> tuple[Any, int]:

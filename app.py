@@ -184,6 +184,13 @@ def api_inventory_groups():
     return jsonify(data), status
 
 
+@app.route("/api/inventory/hosts", methods=["DELETE"])
+def api_inventory_delete_hosts():
+    body = request.get_json(silent=True) or {}
+    data, status = nc.inventory_delete_hosts(body.get("hosts", []))
+    return jsonify(data), status
+
+
 # ─── API proxy: Hosts — paginated ─────────────────────────────────────────────
 
 @app.route("/api/hosts")

@@ -179,6 +179,13 @@
                     <select class="form-control" style="width:180px;" id="group-filter" onchange="Hosts.onFilter()">
                         <option value="">All Groups</option>
                     </select>
+                    <button class="btn btn-danger" id="hosts-delete-btn" disabled
+                        style="font-size:12px;" onclick="Hosts.deleteSelected()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="margin-right:4px;vertical-align:middle;">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                        </svg>Delete Selected
+                    </button>
                 </div>
                 <div class="grid-toolbar-right">
                     <button class="btn btn-outline btn-icon" onclick="Hosts.refresh()" title="Refresh">
@@ -189,6 +196,7 @@
             <div class="table-container">
                 <table>
                     <thead><tr>
+                        <th style="width:36px;"><input type="checkbox" id="hosts-cb-all" onchange="Hosts.toggleAll(this.checked)" title="Select all"></th>
                         <th>Host / IP</th><th>Platform</th><th>Groups</th><th>Port</th><th>Last Job</th><th>Last Result</th><th style="width:80px;">Actions</th>
                     </tr></thead>
                     <tbody id="hosts-body"></tbody>

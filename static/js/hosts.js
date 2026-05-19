@@ -15,6 +15,7 @@ const Hosts = (() => {
     let _platform = '';
     let _group    = '';
     let _drawerHost = null;
+    let _selected = new Set();   // IPs of checked rows
 
     // Debounced search so we don't hammer /api/hosts on every keystroke
     const _debouncedLoad = debounce(_fetchAndRender, 350);
@@ -26,9 +27,11 @@ const Hosts = (() => {
         _search   = '';
         _platform = '';
         _group    = '';
+        _selected.clear();
         $id('host-search').value   = '';
         $id('plat-filter').value   = '';
         $id('group-filter').value  = '';
+        _updateDeleteBtn();
         await _fetchAndRender();
         _loadGroups();
     }
@@ -62,7 +65,7 @@ const Hosts = (() => {
 
     async function _fetchAndRender() {
         const tbody = $id('hosts-body');
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-secondary);">Loading…</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-secondary);">Loading…</td></tr>`;
 
         const res = await API.hosts({
             offset:   _page * _pageSize,
@@ -99,7 +102,7 @@ const Hosts = (() => {
     function _renderTable(hosts) {
         const tbody = $id('hosts-body');
         if (!hosts.length) {
-            tbody.innerHTML = `<tr><td colspan="7">
+            tbody.innerHTML = `<tr><td colspan="8">
                 <div class="empty-state" style="padding:40px 0;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/>
@@ -108,13 +111,17 @@ const Hosts = (() => {
                     <div class="empty-state-title">No hosts found</div>
                     <div class="empty-state-sub">Try adjusting your search or filter criteria.</div>
                 </div></td></tr>`;
+            _syncHeaderCheckbox(hosts);
             return;
         }
 
         tbody.innerHTML = hosts.map(h => {
-            const groups = Array.isArray(h.groups) ? h.groups : (h.group ? [h.group] : []);
+            const groups  = Array.isArray(h.groups) ? h.groups : (h.group ? [h.group] : []);
+            const checked = _selected.has(h.host) ? 'checked' : '';
             return `
-            <tr>
+            <tr class="${_selected.has(h.host) ? 'row-selected' : ''}">
+                <td><input type="checkbox" ${checked}
+                    onchange="Hosts._toggleRow('${escHtml(h.host)}', this.checked)"></td>
                 <td><span class="cell-link" onclick="Hosts.openDrawer('${escHtml(h.host)}')">${escHtml(h.host)}</span></td>
                 <td>${platBadge(h.platform)}</td>
                 <td><span style="font-size:12px;color:var(--text-secondary);">${escHtml(groups.join(', '))}</span></td>
@@ -133,6 +140,73 @@ const Hosts = (() => {
                 </td>
             </tr>`;
         }).join('');
+        _syncHeaderCheckbox(hosts);
+    }
+
+    function _toggleRow(host, checked) {
+        if (checked) _selected.add(host);
+        else         _selected.delete(host);
+        _updateDeleteBtn();
+        _syncHeaderCheckbox(null);
+    }
+
+    function toggleAll(checked) {
+        // Select/deselect all visible rows on the current page
+        const rows = $id('hosts-body').querySelectorAll('input[type=checkbox]');
+        rows.forEach(cb => {
+            const host = cb.closest('tr')?.querySelector('.cell-link')?.textContent;
+            if (!host) return;
+            if (checked) _selected.add(host);
+            else         _selected.delete(host);
+            cb.checked = checked;
+        });
+        // Toggle row-selected class
+        $id('hosts-body').querySelectorAll('tr').forEach(tr => {
+            tr.classList.toggle('row-selected', checked && tr.querySelector('input[type=checkbox]') !== null);
+        });
+        _updateDeleteBtn();
+    }
+
+    function _syncHeaderCheckbox(hosts) {
+        const cb = $id('hosts-cb-all');
+        if (!cb) return;
+        const rows = $id('hosts-body').querySelectorAll('input[type=checkbox]');
+        if (!rows.length) { cb.checked = false; cb.indeterminate = false; return; }
+        const checkedCount = [...rows].filter(r => r.checked).length;
+        cb.checked       = checkedCount === rows.length;
+        cb.indeterminate = checkedCount > 0 && checkedCount < rows.length;
+    }
+
+    function _updateDeleteBtn() {
+        const btn = $id('hosts-delete-btn');
+        if (!btn) return;
+        const n = _selected.size;
+        btn.disabled = n === 0;
+        btn.innerHTML = n > 0
+            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="margin-right:4px;vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete ${n} Selected`
+            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" style="margin-right:4px;vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Delete Selected`;
+    }
+
+    async function deleteSelected() {
+        if (_selected.size === 0) return;
+        const hosts = [..._selected];
+        const noun = hosts.length === 1 ? 'host' : 'hosts';
+        if (!confirm(
+            `Delete ${hosts.length} ${noun} from inventory?\n\n` +
+            hosts.join('\n') +
+            '\n\nThis removes them from the inventory file(s) and cannot be undone.'
+        )) return;
+
+        const res = await API.delete('/api/inventory/hosts', { hosts });
+        if (res.ok) {
+            const n = res.data.removed ?? hosts.length;
+            showToast(`Removed ${n} ${noun} from inventory`, 'success');
+            _selected.clear();
+            _updateDeleteBtn();
+            await _fetchAndRender();
+        } else {
+            showToast(`Delete failed: ${res.data?.detail || res.data?.error || 'Unknown error'}`, 'error');
+        }
     }
 
     function _renderPager() {
@@ -238,5 +312,6 @@ const Hosts = (() => {
         load, refresh,
         onSearch, onFilter, onPageSizeChange,
         openDrawer, closeDrawer, runJobForCurrent, runJobFor,
+        toggleAll, _toggleRow, deleteSelected,
     };
 })();

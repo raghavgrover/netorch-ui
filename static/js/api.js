@@ -45,7 +45,7 @@ const API = (() => {
     };
     const post   = (path, body)   => request('POST',   path, body);
     const put    = (path, body)   => request('PUT',    path, body);
-    const del    = (path)         => request('DELETE', path);
+    const del    = (path, body)   => request('DELETE', path, body ?? null);
 
     // ── Health check ──────────────────────────────────────────────────────────
     async function checkHealth() {
