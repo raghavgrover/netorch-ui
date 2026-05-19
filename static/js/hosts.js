@@ -197,7 +197,7 @@ const Hosts = (() => {
             '\n\nThis removes them from the inventory file(s) and cannot be undone.'
         )) return;
 
-        const res = await API.delete('/api/inventory/hosts', { hosts });
+        const res = await API.del('/api/inventory/hosts', { hosts });
         if (res.ok) {
             const n = res.data.removed ?? hosts.length;
             showToast(`Removed ${n} ${noun} from inventory`, 'success');

@@ -101,7 +101,7 @@ const API = (() => {
     const workflowDelete = (name)               => del(`/api/workflows/${encodeURIComponent(name)}`);
 
     return {
-        get, post,
+        get, post, del,
         checkHealth,
         inventorySources, inventorySourceContent, inventorySourceSave,
         inventorySourceCreate, inventorySourceDelete, inventoryReload,
