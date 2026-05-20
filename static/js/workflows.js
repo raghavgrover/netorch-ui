@@ -21,6 +21,9 @@ const Workflows = (() => {
     let _viewFilename = null;
     let _editFilename = null;
 
+    // Cache of available runbooks for the device_runbook step dropdown
+    let _cachedRunbooks = [];
+
     // Run modal state
     let _runFilename = null;
     let _runDevices  = [];
@@ -207,11 +210,12 @@ const Workflows = (() => {
         if (saveBtn) saveBtn.disabled = false;
     }
 
-    function _eMode(mode) {
+    async function _eMode(mode) {
         if (mode === 'steps' && _eMode_st === 'code') {
             const yaml = $id('wf-e-ta')?.value || '';
             try { jsyaml.load(yaml); }
             catch(e) { showToast(`YAML error: ${e.message}`, 'error'); return; }
+            await _fetchRunbooksIfNeeded();
             _renderStepsEditable('e');
         }
         if (mode === 'code' && _eMode_st === 'steps') {
@@ -263,11 +267,12 @@ const Workflows = (() => {
         setTimeout(() => $id('wf-new-filename')?.focus(), 100);
     }
 
-    function _nMode(mode) {
+    async function _nMode(mode) {
         if (mode === 'steps' && _nMode_st === 'code') {
             const yaml = $id('wf-n-ta')?.value || '';
             try { jsyaml.load(yaml); }
             catch(e) { showToast(`YAML error: ${e.message}`, 'error'); return; }
+            await _fetchRunbooksIfNeeded();
             _renderStepsEditable('n');
         }
         _nMode_st = mode;
@@ -363,6 +368,12 @@ const Workflows = (() => {
 
     // ── Editable step rendering (Edit / New modals) ───────────────────────────
 
+    async function _fetchRunbooksIfNeeded() {
+        if (_cachedRunbooks.length > 0) return;
+        const res = await API.runbooksList();
+        if (res.ok) _cachedRunbooks = res.data.runbooks || [];
+    }
+
     function _renderStepsEditable(ctx) {
         const yaml = $id(_c(ctx,'ta'))?.value || '';
         let doc = {};
@@ -442,7 +453,7 @@ const Workflows = (() => {
                     </button>
                     <div id="${_c(ctx,'menu')}" style="display:none;position:absolute;left:0;top:100%;z-index:300;background:var(--bg-card);border:1px solid var(--border-light);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:190px;margin-top:4px;">
                         ${[['device_commands','Device Commands'],['device_config','Device Config Commands'],
-                           ['file_transfer','File Transfer'],['device_runbook','Run Runbook'],['shell','Shell Script']]
+                           ['file_transfer','File Transfer'],['device_runbook','Execute a Runbook'],['shell','Shell Script']]
                           .map(([t,l]) => `<div style="padding:9px 14px;cursor:pointer;font-size:13px;"
                               onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background=''"
                               onclick="Workflows._addStep('${ctx}','${t}')">${escHtml(l)}</div>`).join('')}
@@ -454,6 +465,13 @@ const Workflows = (() => {
     function _stepCardEditable(step, idx, ctx) {
         const type = step.type || 'device_commands';
         const types = ['device_commands','device_config','file_transfer','device_runbook','shell'];
+        const typeLabels = {
+            device_commands: 'Device Commands',
+            device_config:   'Device Config Commands',
+            file_transfer:   'File Transfer',
+            device_runbook:  'Execute a Runbook',
+            shell:           'Shell Script',
+        };
         let fields = '';
 
         if (type === 'device_commands' || type === 'device_config') {
@@ -481,11 +499,17 @@ const Workflows = (() => {
                     onchange="Workflows._updateStep('${ctx}',${idx},'post_transfer_commands',this.value)">${escHtml((step.post_transfer_commands||[]).join('\n'))}</textarea>
             </div>`;
         } else if (type === 'device_runbook') {
+            const rbOpts = (_cachedRunbooks || []).map(rb =>
+                `<option value="${escHtml(rb.name)}" ${rb.name===(step.runbook||'')?'selected':''}>${escHtml(rb.name)}</option>`
+            ).join('');
             fields = `<div class="form-group" style="margin-bottom:8px;">
                 <label class="form-label" style="font-size:11px;">Runbook</label>
-                <input type="text" class="form-control" style="font-size:12px;" value="${escHtml(step.runbook||'')}"
-                    placeholder="cisco_verify_version.sh"
+                <select class="form-control" style="font-size:12px;"
                     onchange="Workflows._updateStep('${ctx}',${idx},'runbook',this.value)">
+                    <option value="">— Select a runbook —</option>
+                    ${rbOpts}
+                </select>
+                <div class="form-hint" style="font-size:11px;">From /opt/netorch/runbooks/</div>
             </div>`;
         } else if (type === 'shell') {
             const runVal = step.run || 'once';
@@ -513,7 +537,7 @@ const Workflows = (() => {
                         onchange="Workflows._updateStep('${ctx}',${idx},'name',this.value)">
                     <select class="form-control" style="width:165px;font-size:12px;"
                         onchange="Workflows._changeStepType('${ctx}',${idx},this.value)">
-                        ${types.map(t=>`<option value="${t}" ${type===t?'selected':''}>${t}</option>`).join('')}
+                        ${types.map(t=>`<option value="${t}" ${type===t?'selected':''}>${typeLabels[t]||t}</option>`).join('')}
                     </select>
                     <button class="btn btn-danger btn-icon" onclick="Workflows._removeStep('${ctx}',${idx})" title="Remove">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
@@ -538,8 +562,9 @@ const Workflows = (() => {
         _renderStepsEditable(ctx);
     }
 
-    function _addStep(ctx, type) {
+    async function _addStep(ctx, type) {
         _closeAllMenus();
+        if (type === 'device_runbook') await _fetchRunbooksIfNeeded();
         const defaults = {
             device_commands: { name:'New Step', type, commands:['show version'] },
             device_config:   { name:'New Step', type, commands:[''] },
