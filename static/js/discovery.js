@@ -74,7 +74,7 @@ const Discovery = (() => {
 
         const scanTimes = _devices.map(d => d.scan_time).filter(Boolean).sort();
         _lastMeta = {
-            bigfix_server: data.bigfix_server || '',
+            bigfix_server: (data.bigfix_server || '').replace(/:\d+$/, ''),
             scan_time:     scanTimes[scanTimes.length - 1] || '',
             total:         data.total || _devices.length,
         };

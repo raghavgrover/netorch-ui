@@ -294,9 +294,8 @@
 
         <!-- ════ DISCOVERY ════ -->
         <div id="view-discovery" class="view-section">
-            <!-- Row 1: action buttons only -->
-            <div class="grid-toolbar" style="margin-bottom:6px;">
-                <div class="grid-toolbar-left"></div>
+            <div class="grid-toolbar">
+                <div class="grid-toolbar-left"><span id="disc-status" style="font-size:12px;color:var(--text-secondary);"></span></div>
                 <div class="grid-toolbar-right">
                     <button class="btn btn-outline" id="disc-add-btn" disabled
                         onclick="Discovery.openAddModal()">
@@ -312,10 +311,6 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh
                     </button>
                 </div>
-            </div>
-            <!-- Row 2: status info bar -->
-            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;padding:0 2px;">
-                <span id="disc-status"></span>
             </div>
             <!-- Filter bar -->
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:8px;">
