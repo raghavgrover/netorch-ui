@@ -667,11 +667,63 @@ const Discovery = (() => {
             </div>`;
     }
 
+    // ── CSV Export ────────────────────────────────────────────────────────────
+
+    function exportCsv() {
+        if (!_filtered.length) {
+            showToast('No data to export — apply a less restrictive filter or refresh first.', 'error');
+            return;
+        }
+
+        const headers = [
+            'IP Address', 'Hostname', 'MAC Address', 'Device Type',
+            'OS', 'Scan Point', 'Inferred Platform', 'In Inventory',
+            'Inventory File', 'Inventory Group', 'Scan Time',
+        ];
+
+        const escape = v => {
+            const s = String(v ?? '');
+            // Wrap in quotes if the value contains comma, quote, or newline
+            return s.includes(',') || s.includes('"') || s.includes('\n')
+                ? `"${s.replace(/"/g, '""')}"`
+                : s;
+        };
+
+        const rows = _filtered.map(d => [
+            d.ip,
+            d.hostname || '',
+            d.mac || '',
+            d.device_type || '',
+            d.os || '',
+            d.open_ports || '',        // Scan Point column
+            d.inferred_platform || '',
+            d.in_inventory ? 'Yes' : 'No',
+            d.inventory_file || '',
+            d.inventory_group || '',
+            d.scan_time || '',
+        ].map(escape).join(','));
+
+        const csv  = [headers.join(','), ...rows].join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const ts   = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `netorch-discovery-${ts}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast(`Exported ${_filtered.length} device${_filtered.length !== 1 ? 's' : ''} to CSV`, 'success');
+    }
+
     return {
         load, refresh: _fetchWorkflows, applyFilters, sortBy,
         _toggleRow, _toggleAll,
         openAddModal, _proceedAddModal, toggleTarget, submitAddToInventory,
         _onGroupSelectChange,
         openScanModal, submitTriggerScan, _onScanTypeChange,
+        exportCsv,
     };
 })();
