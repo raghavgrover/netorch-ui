@@ -117,7 +117,9 @@ const Dashboard = (() => {
             return;
         }
         container.innerHTML = entries.map(([p, c]) => `
-            <div class="kpi-card" style="min-height:80px;cursor:default;">
+            <div class="kpi-card" style="min-height:80px;cursor:pointer;"
+                 title="View ${p} hosts"
+                 onclick="Hosts.filterByPlatform('${escHtml(p)}')">
                 <div style="font-size:28px;font-weight:700;color:${platColors[p] || '#64748b'};margin-bottom:6px;">${fmtNum(c)}</div>
                 <div style="font-size:11px;color:var(--text-secondary);font-weight:600;">${p.replace(/_/g,' ').toUpperCase()}</div>
             </div>`).join('');

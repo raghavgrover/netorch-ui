@@ -23,14 +23,22 @@ const Hosts = (() => {
     // ── Public entry point ────────────────────────────────────────────────────
 
     async function load() {
-        _page = 0;
+        _page     = 0;
         _search   = '';
-        _platform = '';
         _group    = '';
         _selected.clear();
-        $id('host-search').value   = '';
-        $id('plat-filter').value   = '';
-        $id('group-filter').value  = '';
+        $id('host-search').value  = '';
+        $id('group-filter').value = '';
+
+        if (_pendingPlatformFilter !== null) {
+            _platform = _pendingPlatformFilter;
+            _pendingPlatformFilter = null;
+        } else {
+            _platform = '';
+        }
+        const platEl = $id('plat-filter');
+        if (platEl) platEl.value = _platform;
+
         _updateDeleteBtn();
         await _fetchAndRender();
         _loadGroups();
@@ -313,5 +321,15 @@ const Hosts = (() => {
         onSearch, onFilter, onPageSizeChange,
         openDrawer, closeDrawer, runJobForCurrent, runJobFor,
         toggleAll, _toggleRow, deleteSelected,
+        filterByPlatform,
     };
+
+    function filterByPlatform(platform) {
+        // Set filters BEFORE Nav.go so load() picks them up correctly.
+        // We temporarily override load to avoid the filter reset.
+        _pendingPlatformFilter = platform;
+        Nav.go('hosts');
+    }
+
+    let _pendingPlatformFilter = null;
 })();
