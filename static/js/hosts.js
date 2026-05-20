@@ -316,6 +316,15 @@ const Hosts = (() => {
         Nav.go('newjob');
     }
 
+    // ── Filter by platform (called from Dashboard tiles) ─────────────────────
+
+    let _pendingPlatformFilter = null;
+
+    function filterByPlatform(platform) {
+        _pendingPlatformFilter = platform;
+        Nav.go('hosts');
+    }
+
     return {
         load, refresh,
         onSearch, onFilter, onPageSizeChange,
@@ -323,13 +332,4 @@ const Hosts = (() => {
         toggleAll, _toggleRow, deleteSelected,
         filterByPlatform,
     };
-
-    function filterByPlatform(platform) {
-        // Set filters BEFORE Nav.go so load() picks them up correctly.
-        // We temporarily override load to avoid the filter reset.
-        _pendingPlatformFilter = platform;
-        Nav.go('hosts');
-    }
-
-    let _pendingPlatformFilter = null;
 })();
