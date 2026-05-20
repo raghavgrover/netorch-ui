@@ -351,7 +351,7 @@ const Workflows = (() => {
             details = `<div style="font-size:12px;margin-top:6px;"><span style="color:var(--text-secondary);">Local:</span> <code>${escHtml(step.local_path||'')}</code> → <span style="color:var(--text-secondary);">Remote:</span> <code>${escHtml(step.remote_path||'')}</code></div>`;
         } else if (type === 'device_runbook') {
             details = `<div style="font-size:12px;margin-top:6px;"><span style="color:var(--text-secondary);">Runbook:</span> <code>${escHtml(step.runbook||'')}</code></div>`;
-        } else if (type === 'shell') {
+        } else if (type === 'shell' || type === 'run_shell_script_locally') {
             details = `<div style="font-size:12px;margin-top:6px;"><span style="color:var(--text-secondary);">run:</span> <strong>${escHtml(step.run||'')}</strong></div>
                        <div style="font-family:monospace;font-size:12px;background:#f8fafc;border:1px solid var(--border-light);border-radius:4px;padding:8px;margin-top:6px;white-space:pre-wrap;">${escHtml(step.script||'')}</div>`;
         }
@@ -391,13 +391,19 @@ const Workflows = (() => {
         if (paramsEl) {
             const params = doc.parameters || [];
             paramsEl.innerHTML = `
-                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;">PARAMETERS</div>
-                <div id="${ctx}-param-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">PARAMETERS
+                    <span style="font-weight:400;font-style:italic;margin-left:6px;">— declared names only; values are supplied at run time</span>
+                </div>
+                <div id="${ctx}-param-rows" style="margin-bottom:8px;">
                     ${params.map((p,i) => `
-                        <div style="background:#eff6ff;color:var(--hcl-blue);border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;">
-                            <input type="text" value="${escHtml(String(p))}" style="background:transparent;border:none;outline:none;font-size:12px;color:inherit;width:${Math.max(80,String(p).length*8)}px;"
-                                onchange="Workflows._updateParam('${ctx}',${i},this.value)">
-                            <span style="cursor:pointer;opacity:.6;" onclick="Workflows._removeParam('${ctx}',${i})">×</span>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <input type="text" class="form-control" value="${escHtml(String(p))}"
+                                placeholder="PARAMETER_NAME"
+                                style="font-size:12px;font-family:monospace;max-width:260px;"
+                                oninput="Workflows._updateParam('${ctx}',${i},this.value)">
+                            <button class="btn btn-danger btn-icon" onclick="Workflows._removeParam('${ctx}',${i})" title="Remove">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
                         </div>`).join('')}
                 </div>
                 <button class="btn btn-outline" style="font-size:12px;padding:4px 10px;"
@@ -453,7 +459,7 @@ const Workflows = (() => {
                     </button>
                     <div id="${_c(ctx,'menu')}" style="display:none;position:absolute;left:0;top:100%;z-index:300;background:var(--bg-card);border:1px solid var(--border-light);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:190px;margin-top:4px;">
                         ${[['device_commands','Device Commands'],['device_config','Device Config Commands'],
-                           ['file_transfer','File Transfer'],['device_runbook','Execute a Runbook'],['shell','Shell Script']]
+                           ['file_transfer','File Transfer'],['device_runbook','Execute a Runbook'],['run_shell_script_locally','Run Shell Script Locally']]
                           .map(([t,l]) => `<div style="padding:9px 14px;cursor:pointer;font-size:13px;"
                               onmouseenter="this.style.background='var(--bg-hover)'" onmouseleave="this.style.background=''"
                               onclick="Workflows._addStep('${ctx}','${t}')">${escHtml(l)}</div>`).join('')}
@@ -464,13 +470,13 @@ const Workflows = (() => {
 
     function _stepCardEditable(step, idx, ctx) {
         const type = step.type || 'device_commands';
-        const types = ['device_commands','device_config','file_transfer','device_runbook','shell'];
+        const types = ['device_commands','device_config','file_transfer','device_runbook','run_shell_script_locally'];
         const typeLabels = {
             device_commands: 'Device Commands',
             device_config:   'Device Config Commands',
             file_transfer:   'File Transfer',
             device_runbook:  'Execute a Runbook',
-            shell:           'Shell Script',
+            run_shell_script_locally: 'Run Shell Script Locally',
         };
         let fields = '';
 
@@ -511,15 +517,21 @@ const Workflows = (() => {
                 </select>
                 <div class="form-hint" style="font-size:11px;">From /opt/netorch/runbooks/</div>
             </div>`;
-        } else if (type === 'shell') {
+        } else if (type === 'shell' || type === 'run_shell_script_locally') {
             const runVal = step.run || 'once';
+            const runDesc = runVal === 'once'
+                ? 'The shell script will be run locally on this orchestrator device exactly once.'
+                : 'The shell script will be run locally on this orchestrator device once per target device, with device context injected as environment variables.';
             fields = `<div class="form-group" style="margin-bottom:8px;">
                 <label class="form-label" style="font-size:11px;">Run</label>
-                <select class="form-control" style="font-size:12px;width:130px;"
-                    onchange="Workflows._updateStep('${ctx}',${idx},'run',this.value)">
-                    <option value="once" ${runVal==='once'?'selected':''}>once</option>
-                    <option value="per_device" ${runVal==='per_device'?'selected':''}>per_device</option>
-                </select>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <select class="form-control" style="font-size:12px;width:130px;"
+                        onchange="Workflows._updateStepRun('${ctx}',${idx},this.value)">
+                        <option value="once" ${runVal==='once'?'selected':''}>once</option>
+                        <option value="per_device" ${runVal==='per_device'?'selected':''}>per_device</option>
+                    </select>
+                    <span id="wf-run-desc-${ctx}-${idx}" style="font-size:11px;color:var(--text-secondary);font-style:italic;flex:1;">${escHtml(runDesc)}</span>
+                </div>
             </div>
             <div class="form-group" style="margin-bottom:8px;">
                 <label class="form-label" style="font-size:11px;">Script</label>
@@ -570,12 +582,23 @@ const Workflows = (() => {
             device_config:   { name:'New Step', type, commands:[''] },
             file_transfer:   { name:'New Step', type, local_path:'', remote_path:'' },
             device_runbook:  { name:'New Step', type, runbook:'' },
-            shell:           { name:'New Step', type, run:'once', script:'echo "hello"' },
+            run_shell_script_locally: { name:'New Step', type, run:'once', script:'echo "hello"' },
         };
         _mutateDocs(ctx, doc => {
             if (!doc.steps) doc.steps = [];
             doc.steps.push(defaults[type] || { name:'New Step', type });
         });
+    }
+
+    function _updateStepRun(ctx, idx, val) {
+        // Update the description text immediately without re-rendering the whole step
+        const descEl = $id(`wf-run-desc-${ctx}-${idx}`);
+        if (descEl) {
+            descEl.textContent = val === 'once'
+                ? 'The shell script will be run locally on this orchestrator device exactly once.'
+                : 'The shell script will be run locally on this orchestrator device once per target device, with device context injected as environment variables.';
+        }
+        _updateStep(ctx, idx, 'run', val);
     }
 
     function _removeStep(ctx, idx) {
@@ -591,7 +614,7 @@ const Workflows = (() => {
             delete step.local_path; delete step.remote_path;
             delete step.post_transfer_commands; delete step.runbook;
             if (newType==='device_commands'||newType==='device_config') step.commands=[''];
-            if (newType==='shell') { step.run='once'; step.script=''; }
+            if (newType==='run_shell_script_locally') { step.run='once'; step.script=''; }
             if (newType==='file_transfer') { step.local_path=''; step.remote_path=''; }
             if (newType==='device_runbook') step.runbook='';
         });
@@ -611,7 +634,20 @@ const Workflows = (() => {
     }
 
     function _addParam(ctx) {
-        _mutateDocs(ctx, doc => { if(!doc.parameters) doc.parameters=[]; doc.parameters.push('NEW_PARAM'); });
+        _mutateDocs(ctx, doc => {
+            if (!doc.parameters) doc.parameters = [];
+            // Generate a unique name so each new param is distinct
+            const existing = new Set(doc.parameters.map(p => String(p)));
+            let name = 'NEW_PARAM';
+            let n = 1;
+            while (existing.has(name)) { name = `NEW_PARAM_${n++}`; }
+            doc.parameters.push(name);
+        });
+        // Focus the newly added input so user can type immediately
+        setTimeout(() => {
+            const rows = $id(`${ctx}-param-rows`)?.querySelectorAll('input[type=text]');
+            if (rows?.length) rows[rows.length - 1].focus();
+        }, 50);
     }
     function _removeParam(ctx, i) {
         _mutateDocs(ctx, doc => { (doc.parameters||[]).splice(i,1); });
@@ -888,7 +924,7 @@ const Workflows = (() => {
         _nMode,
         submitRun, closeRunModal, addParam,
         _openRunModal, _deleteWorkflow,
-        _addStep, _removeStep, _changeStepType, _updateStep,
+        _addStep, _removeStep, _changeStepType, _updateStep, _updateStepRun,
         _addParam, _removeParam, _updateParam,
         _addVar, _removeVar, _updateVar,
         _toggleAddStepMenu,
