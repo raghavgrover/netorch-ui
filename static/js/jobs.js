@@ -53,8 +53,15 @@ const Jobs = (() => {
     // ── Job list ──────────────────────────────────────────────────────────────
 
     async function load() {
-        _page       = 0;
-        _statusFilt = $id('job-status-filter').value;
+        _page = 0;
+        // If filterByStatus() pre-set _statusFilt, keep it and sync the dropdown.
+        // Otherwise read from the dropdown (normal navigation).
+        const el = $id('job-status-filter');
+        if (_statusFilt && el && el.value !== _statusFilt) {
+            el.value = _statusFilt;   // sync UI to the pre-set filter
+        } else if (el) {
+            _statusFilt = el.value;   // normal: read from UI
+        }
         await _fetchAndRender();
     }
 
@@ -600,8 +607,17 @@ const Jobs = (() => {
         } catch { return ts; }
     }
 
+    function filterByStatus(status) {
+        _page       = 0;
+        _statusFilt = status;
+        const el = $id('job-status-filter');
+        if (el) el.value = status;
+        Nav.go('jobs');
+    }
+
     return {
         load, refresh, onFilter,
         cancel, openDetail, toggleDevice,
+        filterByStatus,
     };
 })();

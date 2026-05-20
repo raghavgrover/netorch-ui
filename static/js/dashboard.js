@@ -61,7 +61,7 @@ const Dashboard = (() => {
 
         $id('kpi-hosts-card').onclick   = () => Nav.go('hosts');
         $id('kpi-files-card').onclick   = () => Nav.go('inventory');
-        $id('kpi-running-card').onclick = () => Nav.go('jobs');
+        $id('kpi-running-card').onclick = () => Jobs.filterByStatus('running');
         $id('kpi-groups-card').onclick  = () => Nav.go('hosts');
     }
 
