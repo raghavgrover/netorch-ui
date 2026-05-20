@@ -400,7 +400,7 @@ const Workflows = (() => {
                             <input type="text" class="form-control" value="${escHtml(String(p))}"
                                 placeholder="PARAMETER_NAME"
                                 style="font-size:12px;font-family:monospace;max-width:260px;"
-                                oninput="Workflows._updateParam('${ctx}',${i},this.value)">
+                                onchange="Workflows._updateParam('${ctx}',${i},this.value)">
                             <button class="btn btn-danger btn-icon" onclick="Workflows._removeParam('${ctx}',${i})" title="Remove">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                             </button>
@@ -521,7 +521,7 @@ const Workflows = (() => {
             const runVal = step.run || 'once';
             const runDesc = runVal === 'once'
                 ? 'The shell script will be run locally on this orchestrator device exactly once.'
-                : 'The shell script will be run locally on this orchestrator device once per target device, with device context injected as environment variables.';
+                : 'The shell script will be run locally on this orchestrator device once per target device. Device context is available as: $TARGET_HOST (IP), $DEVICE_PLATFORM, $DEVICE_USERNAME, $DEVICE_PASSWORD, $DEVICE_GROUP, $DEVICE_SSH_PORT, $NETORCH_JOB_ID.';
             fields = `<div class="form-group" style="margin-bottom:8px;">
                 <label class="form-label" style="font-size:11px;">Run</label>
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -596,7 +596,7 @@ const Workflows = (() => {
         if (descEl) {
             descEl.textContent = val === 'once'
                 ? 'The shell script will be run locally on this orchestrator device exactly once.'
-                : 'The shell script will be run locally on this orchestrator device once per target device, with device context injected as environment variables.';
+                : 'The shell script will be run locally on this orchestrator device once per target device. Device context is available as: $TARGET_HOST (IP), $DEVICE_PLATFORM, $DEVICE_USERNAME, $DEVICE_PASSWORD, $DEVICE_GROUP, $DEVICE_SSH_PORT, $NETORCH_JOB_ID.';
         }
         _updateStep(ctx, idx, 'run', val);
     }
