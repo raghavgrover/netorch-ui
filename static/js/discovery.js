@@ -88,7 +88,7 @@ const Discovery = (() => {
     function _setStatus(msg, server) {
         const el = $id('disc-status');
         if (!el) return;
-        el.textContent = msg + (server ? ` · BigFix: ${server}` : '');
+        el.textContent = msg + (server ? ` · Root Server: ${server}` : '');
     }
 
     function _updateStatus() {
@@ -100,7 +100,7 @@ const Discovery = (() => {
         ];
         if (sel > 0) parts.push(`${sel} selected`);
         if (_lastMeta.scan_time) parts.push(`Last scan: ${_lastMeta.scan_time}`);
-        if (_lastMeta.bigfix_server) parts.push(`BigFix: ${_lastMeta.bigfix_server}`);
+        if (_lastMeta.bigfix_server) parts.push(`Root Server: ${_lastMeta.bigfix_server}`);
         el.textContent = parts.join(' · ');
     }
 
