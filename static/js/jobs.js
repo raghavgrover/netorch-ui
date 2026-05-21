@@ -177,6 +177,20 @@ const Jobs = (() => {
 
         _renderDetail(jobId, job, detail);
 
+        // If this is a completed workflow job but step outputs came back empty,
+        // the background writer may still be committing — retry once after 800ms.
+        const isWorkflow     = job.mode === 'workflow';
+        const isTerminal     = ['completed','failed','partial_failure','cancelled'].includes(job.status);
+        const hasEmptySteps  = isWorkflow && isTerminal && (!detail?.steps?.length);
+        if (hasEmptySteps) {
+            setTimeout(async () => {
+                const retry = await API.jobDetail(jobId);
+                if (retry.ok && retry.data.steps?.length) {
+                    _renderDetail(jobId, job, retry.data);
+                }
+            }, 800);
+        }
+
         if (job.status === 'running') {
             _startElapsedTimer(job.started_at);
             _startSSE(jobId);
