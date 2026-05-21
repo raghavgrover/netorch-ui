@@ -17,6 +17,7 @@ const Jobs = (() => {
     let _activeSSE  = null;
     let _elapsedTimer = null;   // setInterval handle for live elapsed clock
     let _jobStartTs   = null;   // Date object when current job started
+    let _currentJobIsWorkflow = false;   // skip per-device SSE patches for workflow jobs
 
     // ── Normalise JobStatusResponse OR detail shape → flat UI object ──────────
     function _normalise(j) {
@@ -175,14 +176,12 @@ const Jobs = (() => {
         const job    = _normalise(jobRes.data);
         const detail = detailRes.ok ? detailRes.data : null;
 
+        _currentJobIsWorkflow = (job.mode === 'workflow');
         _renderDetail(jobId, job, detail);
 
         // If this is a completed workflow job but step outputs came back empty,
-        // the background writer may still be committing — retry once after 800ms.
-        const isWorkflow     = job.mode === 'workflow';
-        const isTerminal     = ['completed','failed','partial_failure','cancelled'].includes(job.status);
-        const hasEmptySteps  = isWorkflow && isTerminal && (!detail?.steps?.length);
-        if (hasEmptySteps) {
+        // retry once after 800ms (background writer may still be committing).
+        if (_currentJobIsWorkflow && !job.running && (!detail?.steps?.length)) {
             setTimeout(async () => {
                 const retry = await API.jobDetail(jobId);
                 if (retry.ok && retry.data.steps?.length) {
@@ -510,9 +509,30 @@ const Jobs = (() => {
         const actionsEl = $id('jd-actions');
         if (actionsEl) actionsEl.innerHTML = _actionsHtml(jobId, job.status);
 
-        // Re-render devices with final output
+        // Re-render results with final output.
+        // Workflow jobs use the step-wise view — re-fetch detail to get step outputs.
+        // Regular jobs use the per-device accordion.
         const devicesEl = $id('jd-devices');
-        if (devicesEl) devicesEl.innerHTML = _devicesHtml(devices);
+        if (devicesEl) {
+            if (_currentJobIsWorkflow) {
+                // Fetch step outputs (may need a moment to commit)
+                const fetchSteps = async () => {
+                    const r = await API.jobDetail(jobId);
+                    if (r.ok && r.data.steps?.length) {
+                        devicesEl.innerHTML = _stepsHtml(r.data.steps, r.data.devices || []);
+                    } else if (r.ok) {
+                        // Steps not ready yet — retry once more after 800ms
+                        setTimeout(async () => {
+                            const r2 = await API.jobDetail(jobId);
+                            if (r2.ok) devicesEl.innerHTML = _stepsHtml(r2.data.steps || [], r2.data.devices || []);
+                        }, 800);
+                    }
+                };
+                fetchSteps();
+            } else {
+                devicesEl.innerHTML = _devicesHtml(devices);
+            }
+        }
     }
 
     /** Called on every SSE data message — patches individual elements without full re-render */
@@ -531,8 +551,9 @@ const Jobs = (() => {
             if (statusEl) statusEl.innerHTML = statusBadge(data.status);
         }
 
-        // Per-device rows — patch existing rows or inject new ones
-        if (Array.isArray(data.devices)) {
+        // Per-device rows — patch existing rows or inject new ones.
+        // Workflow jobs use the step-wise view; skip device patching entirely.
+        if (!_currentJobIsWorkflow && Array.isArray(data.devices)) {
             const container = $id('jd-devices');
 
             data.devices.forEach((d, i) => {
