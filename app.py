@@ -30,8 +30,18 @@ from config import cfg
 
 # ─── App setup ────────────────────────────────────────────────────────────────
 
+# In a cx_Freeze frozen binary, __file__ for the main module resolves to
+# lib/app.pyc, so Flask's automatic root_path detection lands in lib/ and
+# misses templates/ and static/.  Use sys.executable instead, which always
+# points to the actual binary (e.g. /opt/netorch-ui/netorch-ui).
+if getattr(sys, "frozen", False):
+    _app_root = os.path.dirname(sys.executable)
+else:
+    _app_root = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(
     __name__,
+    root_path=_app_root,
     template_folder="templates",
     static_folder="static",
     static_url_path="/static",
