@@ -584,6 +584,9 @@ input[type="checkbox"]:checked {
 .log-warn { color: #fde68a; }
 .log-info { color: #93c5fd; }
 .log-cmd  { color: #c4b5fd; }
+/* When log-viewer sits inside a device-row the parent clips corners;
+   remove the inner radius and allow more height for multi-command output. */
+.device-row-body .log-viewer { border-radius: 0 0 5px 5px; max-height: 480px; }
 
 /* ── Device accordion ────────────────────────────────────── */
 .device-row { border: 1px solid var(--border-light); border-radius: 6px; margin-bottom: 8px; overflow: hidden; background: var(--bg-card); }

@@ -373,20 +373,29 @@ const Jobs = (() => {
             let body = '';
             if (isOnce) {
                 const lines = (step.once_output || '').split('\n').map(coloriseLine).join('');
-                const errCls = step.once_exit_code !== 0 ? ';border-left:3px solid var(--status-red)' : '';
-                body = `<div class="log-block" style="margin-top:10px${errCls}">${lines || '<span style="opacity:.5;">(no output)</span>'}</div>`;
+                const errStyle = step.once_exit_code !== 0
+                    ? 'margin-top:10px;border-left:3px solid var(--status-red);border-radius:0 6px 6px 0;'
+                    : 'margin-top:10px;';
+                body = `<div class="log-viewer" style="${errStyle}">${lines || '<span style="opacity:.5;">(no output)</span>'}</div>`;
             } else if (hasDevs) {
                 body = step.devices.map(dv => {
                     const lines = (dv.output || []).map(coloriseLine).join('');
-                    const hdr   = dv.exit_code === 0
+                    const icon  = dv.exit_code === 0
                         ? `<span style="color:var(--status-green);">✓</span>`
                         : `<span style="color:var(--status-red);">✕</span>`;
                     return `
-                        <div style="margin-top:8px;">
-                            <div style="font-size:12px;font-weight:600;font-family:monospace;color:var(--text-secondary);margin-bottom:4px;">
-                                ${hdr} ${escHtml(dv.host)}
+                        <div class="device-row" style="margin-top:8px;">
+                            <div class="device-row-header"
+                                 onclick="const b=this.nextElementSibling;b.classList.toggle('open');this.querySelector('.expand-arrow').classList.toggle('open');">
+                                <svg class="expand-arrow open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;flex-shrink:0;">
+                                    <path d="M9 18l6-6-6-6"/>
+                                </svg>
+                                ${icon}
+                                <span style="font-weight:600;font-size:13px;flex:1;font-family:monospace;">${escHtml(dv.host)}</span>
                             </div>
-                            <div class="log-block">${lines || '<span style="opacity:.5;">(no output)</span>'}</div>
+                            <div class="device-row-body open">
+                                <div class="log-viewer">${lines || '<span style="opacity:.5;">(no output)</span>'}</div>
+                            </div>
                         </div>`;
                 }).join('');
             } else {

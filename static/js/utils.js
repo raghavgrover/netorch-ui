@@ -107,9 +107,11 @@ function coloriseLine(line) {
     if (!line) return '';
     const l = line.toLowerCase();
     let cls = 'log-info';
-    if (l.startsWith('show ') || l.startsWith('ping ') || l.startsWith('traceroute '))
+    // "# <cmd>" prefix written by workflow runner, plus common exec commands
+    if (l.startsWith('# ') || l.startsWith('show ') || l.startsWith('ping ') || l.startsWith('traceroute '))
         cls = 'log-cmd';
-    else if (l.includes('error') || l.includes('fail') || l.includes('denied') || l.includes('unreachable'))
+    // "% " is the IOS/NX-OS/IOS-XR error prefix; also catch word-level error indicators
+    else if (l.startsWith('% ') || l.includes('error') || l.includes('fail') || l.includes('denied') || l.includes('unreachable'))
         cls = 'log-err';
     else if (l.includes('warn') || l.includes('caution'))
         cls = 'log-warn';
