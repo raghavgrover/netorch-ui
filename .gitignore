@@ -1,0 +1,44 @@
+# =============================================================================
+# netorch-ui .gitignore
+# =============================================================================
+
+# --- Virtual environment ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Python bytecode ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# --- Credentials & config (machine-local) ---
+netorch-ui.toml
+*.toml
+*.env
+.env*
+
+# --- Egg / distribution ---
+*.egg-info/
+dist/
+build/
+
+# --- Pytest / coverage ---
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Editor / OS noise ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Claude Code settings (machine-local) ---
+.claude/
