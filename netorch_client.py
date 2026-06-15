@@ -416,3 +416,31 @@ def trigger_discovery_scan(subnet: str) -> tuple:
 def get_discovery_config() -> tuple:
     """Return non-sensitive BigFix discovery configuration."""
     return _get("/discovery/config")
+
+
+# ─── Compliance / Vulnerability scanning ─────────────────────────────────────
+
+def compliance_submit_scan(payload: dict) -> tuple:
+    return _post("/compliance/scans", payload)
+
+
+def compliance_list_scans(limit: int = 50, offset: int = 0) -> tuple:
+    return _get("/compliance/scans", params={"limit": limit, "offset": offset})
+
+
+def compliance_get_scan(scan_id: str) -> tuple:
+    return _get(f"/compliance/scans/{scan_id}")
+
+
+def compliance_get_results(scan_id: str) -> tuple:
+    return _get(f"/compliance/scans/{scan_id}/results")
+
+
+def compliance_get_advisories(ostype: str = "", severity: str = "",
+                               limit: int = 200, offset: int = 0) -> tuple:
+    params = {"limit": limit, "offset": offset}
+    if ostype:
+        params["ostype"] = ostype
+    if severity:
+        params["severity"] = severity
+    return _get("/compliance/advisories", params=params)

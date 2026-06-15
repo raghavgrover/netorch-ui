@@ -697,3 +697,49 @@ hr.divider { border: none; border-top: 1px solid var(--border-light); margin: 20
     letter-spacing: 0.05em;
     margin-bottom: 6px;
 }
+
+/* ── Vulnerability severity badges ──────────────────────────────── */
+.sev-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.sev-critical     { background: #fde8e8; color: #b91c1c; }
+.sev-high         { background: #fef3e2; color: #c2410c; }
+.sev-medium       { background: #fefce8; color: #a16207; }
+.sev-low          { background: #f0fdf4; color: #15803d; }
+.sev-informational{ background: #f0f9ff; color: #0369a1; }
+.sev-unknown      { background: #f1f5f9; color: #64748b; }
+
+/* ── Compliance scan list ────────────────────────────────────────── */
+.scan-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+.scan-card:hover { border-color: var(--hcl-blue); }
+.scan-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.scan-card-id   { font-weight: 600; font-size: 13px; font-family: monospace; }
+.scan-finding-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.finding-pill {
+    font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 99px; display: flex; align-items: center; gap: 4px;
+}
+.pill-critical     { background:#fde8e8; color:#b91c1c; }
+.pill-high         { background:#fef3e2; color:#c2410c; }
+.pill-medium       { background:#fefce8; color:#a16207; }
+.pill-low          { background:#f0fdf4; color:#15803d; }
+.pill-informational{ background:#f0f9ff; color:#0369a1; }

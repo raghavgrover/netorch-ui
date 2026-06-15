@@ -102,6 +102,11 @@ def discovery_page():
     return render_template("base.html", initial_view="discovery")
 
 
+@app.route("/compliance")
+def compliance_page():
+    return render_template("base.html", initial_view="compliance")
+
+
 # ─── API proxy: Discovery ─────────────────────────────────────────────────────
 
 @app.route("/api/discovery/devices")
@@ -134,6 +139,72 @@ def api_discovery_trigger_scan():
 @app.route("/api/discovery/config")
 def api_discovery_config():
     data, status = nc.get_discovery_config()
+    return jsonify(data), status
+
+
+# ─── API proxy: Compliance ───────────────────────────────────────────────────
+
+@app.route("/api/compliance/scans", methods=["POST"])
+def api_compliance_submit():
+    payload = request.get_json(silent=True) or {}
+    data, status = nc.compliance_submit_scan(payload)
+    return jsonify(data), status
+
+
+@app.route("/api/compliance/scans")
+def api_compliance_list_scans():
+    limit  = min(int(request.args.get("limit",  50)), 200)
+    offset = int(request.args.get("offset", 0))
+    data, status = nc.compliance_list_scans(limit=limit, offset=offset)
+    return jsonify(data), status
+
+
+@app.route("/api/compliance/scans/<scan_id>")
+def api_compliance_get_scan(scan_id: str):
+    data, status = nc.compliance_get_scan(scan_id)
+    return jsonify(data), status
+
+
+@app.route("/api/compliance/scans/<scan_id>/results")
+def api_compliance_get_results(scan_id: str):
+    data, status = nc.compliance_get_results(scan_id)
+    return jsonify(data), status
+
+
+@app.route("/api/compliance/scans/<scan_id>/results/csv")
+def api_compliance_get_results_csv(scan_id: str):
+    from flask import Response as FlaskResponse
+    import requests as req_lib
+    from config import cfg
+    try:
+        r = req_lib.get(
+            f"{cfg.netorch.api_url}/compliance/scans/{scan_id}/results/csv",
+            headers=cfg.netorch.headers,
+            timeout=cfg.netorch.request_timeout,
+            stream=True,
+        )
+        return FlaskResponse(
+            r.content,
+            status=r.status_code,
+            mimetype="text/csv",
+            headers={"Content-Disposition": r.headers.get(
+                "Content-Disposition",
+                f'attachment; filename="vuln-scan-{scan_id}.csv"',
+            )},
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/compliance/advisories")
+def api_compliance_advisories():
+    ostype   = request.args.get("ostype",   "")
+    severity = request.args.get("severity", "")
+    limit    = min(int(request.args.get("limit",  200)), 1000)
+    offset   = int(request.args.get("offset", 0))
+    data, status = nc.compliance_get_advisories(
+        ostype=ostype, severity=severity, limit=limit, offset=offset
+    )
     return jsonify(data), status
 
 
