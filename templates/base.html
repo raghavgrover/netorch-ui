@@ -1063,7 +1063,7 @@
 </div>
 
 <!-- ════ COMPLIANCE: NEW SCAN MODAL ════ -->
-<div class="modal-overlay" id="comp-scan-modal" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="comp-scan-modal" onclick="closeModal('comp-scan-modal')">
     <div class="modal" style="max-width:540px;" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title">New Vulnerability Scan</div>
@@ -1076,12 +1076,8 @@
                 <label class="form-label">Target Devices / Groups <span class="required">*</span></label>
                 <div class="chip-select" id="comp-scan-devices"
                     onclick="document.getElementById('comp-scan-device-input')?.focus()">
-                    <input type="text" id="comp-scan-device-input"
-                        placeholder="Type group name or IP, press Enter to add…"
-                        style="border:none;outline:none;font-size:13px;font-family:'Inter';flex:1;min-width:160px;background:transparent;padding:2px 4px;"
-                        onkeydown="Compliance._deviceKeydown(event)"
-                        autocomplete="off">
                 </div>
+                <datalist id="comp-scan-group-datalist"></datalist>
                 <div class="form-hint">Enter group names (e.g. <code>core_switches</code>) or individual IPs. Only Cisco devices are scanned.</div>
             </div>
             <div class="form-group" style="margin-top:12px;">
@@ -1094,7 +1090,7 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-outline" onclick="closeModal('comp-scan-modal')">Cancel</button>
-            <button class="btn btn-primary" id="comp-scan-submit-btn" onclick="Compliance.submitScan()">
+            <button type="button" class="btn btn-primary" id="comp-scan-submit-btn" onclick="Compliance.submitScan()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 Start Scan
             </button>
@@ -1103,7 +1099,7 @@
 </div>
 
 <!-- ════ COMPLIANCE: SCAN RESULTS MODAL ════ -->
-<div class="modal-overlay" id="comp-results-modal" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="comp-results-modal" onclick="closeModal('comp-results-modal')">
     <div class="modal modal-xl" onclick="event.stopPropagation()">
         <div class="modal-header">
             <div class="modal-title" id="comp-results-title">Scan Results</div>

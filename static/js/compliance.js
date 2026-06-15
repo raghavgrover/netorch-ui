@@ -6,7 +6,9 @@
  *   - New Scan modal: enter devices/groups, submit
  *   - Results modal: per-device accordion with advisories table, CSV export
  *
- * Data flow: all API calls go to /api/compliance/* which proxies to netorch.
+ * Chip-select pattern mirrors runbooks.js exactly:
+ *   _devices[] is the source of truth; _renderModalChips() rebuilds the
+ *   container innerHTML (chips + input) on every change.
  */
 'use strict';
 
@@ -18,6 +20,14 @@ const Compliance = (() => {
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
+    function _esc(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
     function _sevBadge(sev) {
         const cls = {
             'Critical':      'sev-critical',
@@ -26,7 +36,7 @@ const Compliance = (() => {
             'Low':           'sev-low',
             'Informational': 'sev-informational',
         }[sev] || 'sev-unknown';
-        return `<span class="sev-badge ${cls}">${Utils.esc(sev || 'Unknown')}</span>`;
+        return `<span class="sev-badge ${cls}">${_esc(sev || 'Unknown')}</span>`;
     }
 
     function _statusBadge(status) {
@@ -38,7 +48,7 @@ const Compliance = (() => {
             failed:          'badge-error',
             cancelled:       'badge-error',
         };
-        return `<span class="badge ${map[status] || 'badge-pending'}">${Utils.esc(status)}</span>`;
+        return `<span class="badge ${map[status] || 'badge-pending'}">${_esc(status)}</span>`;
     }
 
     function _findingPills(scan) {
@@ -79,27 +89,27 @@ const Compliance = (() => {
                 `${resp.total || _scans.length} scan${(resp.total !== 1) ? 's' : ''}`;
             _renderTable();
         } catch (e) {
-            body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:24px 0;"><div class="empty-state-sub">Error loading scans: ${Utils.esc(String(e))}</div></div></td></tr>`;
+            body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:24px 0;"><div class="empty-state-sub">Error loading scans: ${_esc(String(e))}</div></div></td></tr>`;
         }
     }
 
     function _renderTable() {
         const body = document.getElementById('comp-scans-body');
         if (!_scans.length) {
-            body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:30px 0;"><div class="empty-state-icon">🔒</div><div class="empty-state-sub">No vulnerability scans yet. Click <strong>New Scan</strong> to start.</div></div></td></tr>`;
+            body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:30px 0;"><div class="empty-state-sub">No vulnerability scans yet. Click <strong>New Scan</strong> to start.</div></div></td></tr>`;
             return;
         }
         body.innerHTML = _scans.map(s => `
-            <tr style="cursor:pointer;" onclick="Compliance.openResults('${Utils.esc(s.scan_id)}')">
-                <td><code style="font-size:12px;">${Utils.esc(s.scan_id)}</code></td>
+            <tr style="cursor:pointer;" onclick="Compliance.openResults('${_esc(s.scan_id)}')">
+                <td><code style="font-size:12px;">${_esc(s.scan_id)}</code></td>
                 <td>${_statusBadge(s.status)}</td>
-                <td>${Utils.esc(s.incident || '—')}</td>
+                <td>${_esc(s.incident || '—')}</td>
                 <td>${s.device_count}</td>
                 <td>${_findingPills(s)}</td>
                 <td>${s.started_at ? Utils.relTime(s.started_at) : '—'}</td>
                 <td>
                     <button class="btn btn-outline" style="padding:3px 10px;font-size:11px;"
-                        onclick="event.stopPropagation();Compliance.openResults('${Utils.esc(s.scan_id)}')">
+                        onclick="event.stopPropagation();Compliance.openResults('${_esc(s.scan_id)}')">
                         Results
                     </button>
                 </td>
@@ -107,59 +117,88 @@ const Compliance = (() => {
         `).join('');
     }
 
-    // ── New Scan modal (chip-select) ─────────────────────────────────────────
+    // ── Chip-select (mirrors runbooks.js pattern exactly) ────────────────────
 
-    function openNewScan() {
-        _devices = [];
-        document.getElementById('comp-scan-devices').querySelectorAll('.chip').forEach(c => c.remove());
-        document.getElementById('comp-scan-device-input').value = '';
-        document.getElementById('comp-scan-incident').value     = '';
-        document.getElementById('comp-scan-submit-btn').disabled = false;
-        openModal('comp-scan-modal');
+    function _renderModalChips() {
+        const container = document.getElementById('comp-scan-devices');
+        if (!container) return;
+
+        container.innerHTML =
+            _devices.map((d, i) => `
+                <span style="background:#eff6ff;color:var(--hcl-blue);border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:5px;">
+                    ${_esc(d)}
+                    <span style="cursor:pointer;opacity:0.6;display:flex;" onclick="Compliance._removeDevice(${i})">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11">
+                            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </span>
+                </span>`).join('') +
+            `<input type="text" id="comp-scan-device-input"
+                placeholder="${_devices.length ? '' : 'Type group name or IP, press Enter to add…'}"
+                style="border:none;outline:none;font-size:13px;font-family:\'Inter\';flex:1;min-width:160px;background:transparent;padding:2px 4px;"
+                onkeydown="Compliance._deviceKeydown(event)"
+                autocomplete="off" list="comp-scan-group-datalist">`;
     }
 
-    function _deviceKeydown(e) {
-        const inp = e.target;
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
+    function _deviceKeydown(event) {
+        const inp = event.target;
+        if (event.key === 'Enter' || event.key === ',') {
+            event.preventDefault();
             const val = inp.value.trim().replace(/,$/, '');
-            if (val) _addChip(val);
-            inp.value = '';
-        } else if (e.key === 'Backspace' && !inp.value) {
-            _removeLastChip();
+            if (val && !_devices.includes(val)) {
+                _devices.push(val);
+                _renderModalChips();
+            }
+            // Focus the re-rendered input
+            setTimeout(() => document.getElementById('comp-scan-device-input')?.focus(), 0);
+        }
+        if (event.key === 'Backspace' && !inp.value && _devices.length) {
+            _devices.pop();
+            _renderModalChips();
+            setTimeout(() => document.getElementById('comp-scan-device-input')?.focus(), 0);
         }
     }
 
-    function _addChip(val) {
-        if (_devices.includes(val)) return;
-        _devices.push(val);
-        const container = document.getElementById('comp-scan-devices');
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        chip.innerHTML = `${Utils.esc(val)}<button onclick="Compliance._removeChip('${Utils.esc(val)}',this)" style="background:none;border:none;cursor:pointer;margin-left:4px;font-size:14px;line-height:1;">×</button>`;
-        container.insertBefore(chip, document.getElementById('comp-scan-device-input'));
+    function _removeDevice(i) {
+        _devices.splice(i, 1);
+        _renderModalChips();
+        setTimeout(() => document.getElementById('comp-scan-device-input')?.focus(), 0);
     }
 
-    function _removeChip(val, btn) {
-        _devices = _devices.filter(d => d !== val);
-        btn.closest('.chip').remove();
-    }
+    // ── New Scan modal ────────────────────────────────────────────────────────
 
-    function _removeLastChip() {
-        if (!_devices.length) return;
-        const last = _devices[_devices.length - 1];
-        _devices.pop();
-        const chips = document.getElementById('comp-scan-devices').querySelectorAll('.chip');
-        if (chips.length) chips[chips.length - 1].remove();
+    async function openNewScan() {
+        _devices = [];
+        _renderModalChips();
+
+        document.getElementById('comp-scan-incident').value     = '';
+        document.getElementById('comp-scan-submit-btn').disabled = false;
+        document.getElementById('comp-scan-submit-btn').textContent = 'Start Scan';
+
+        // Populate datalist with inventory groups
+        try {
+            const resp = await API.get('/api/inventory/groups');
+            const datalist = document.getElementById('comp-scan-group-datalist');
+            if (datalist) {
+                const groups = (resp.groups || []);
+                datalist.innerHTML = groups.map(g => `<option value="${_esc(g)}">`).join('');
+            }
+        } catch (_) { /* groups are optional */ }
+
+        openModal('comp-scan-modal');
+        setTimeout(() => document.getElementById('comp-scan-device-input')?.focus(), 50);
     }
 
     async function submitScan() {
-        const inp      = document.getElementById('comp-scan-device-input');
-        const incident = document.getElementById('comp-scan-incident').value.trim();
+        // Flush any un-confirmed text still in the input
+        const inp = document.getElementById('comp-scan-device-input');
+        if (inp && inp.value.trim()) {
+            const v = inp.value.trim();
+            if (!_devices.includes(v)) _devices.push(v);
+            inp.value = '';
+        }
 
-        // Flush any un-confirmed text in the input
-        if (inp.value.trim()) _addChip(inp.value.trim());
-        inp.value = '';
+        const incident = document.getElementById('comp-scan-incident').value.trim();
 
         if (!_devices.length) {
             alert('Please add at least one device or group.');
@@ -167,11 +206,11 @@ const Compliance = (() => {
         }
 
         const btn = document.getElementById('comp-scan-submit-btn');
-        btn.disabled = true;
+        btn.disabled    = true;
         btn.textContent = 'Starting…';
 
         const deviceEntries = _devices.map(d => {
-            // Heuristic: IP = host entry; otherwise treat as group
+            // Heuristic: pure IPv4/IPv6 → host; anything else → group
             if (/^[\d.]+$/.test(d) || /^[0-9a-f:]+$/i.test(d)) {
                 return { host: d };
             }
@@ -188,7 +227,7 @@ const Compliance = (() => {
             if (resp.scan_id) openResults(resp.scan_id);
         } catch (e) {
             alert('Scan submission failed: ' + (e.message || e));
-            btn.disabled = false;
+            btn.disabled    = false;
             btn.textContent = 'Start Scan';
         }
     }
@@ -210,7 +249,7 @@ const Compliance = (() => {
             _renderResults(scan, results);
         } catch (e) {
             document.getElementById('comp-results-body').innerHTML =
-                `<div class="warn-banner">Error loading results: ${Utils.esc(String(e))}</div>`;
+                `<div class="warn-banner">Error loading results: ${_esc(String(e))}</div>`;
         }
     }
 
@@ -220,7 +259,7 @@ const Compliance = (() => {
             <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;align-items:center;">
                 <div>${_statusBadge(scan.status)}</div>
                 <div style="font-size:13px;color:var(--text-secondary);">${scan.device_count} device${scan.device_count !== 1 ? 's' : ''}</div>
-                ${scan.incident ? `<div style="font-size:13px;">Incident: <strong>${Utils.esc(scan.incident)}</strong></div>` : ''}
+                ${scan.incident ? `<div style="font-size:13px;">Incident: <strong>${_esc(scan.incident)}</strong></div>` : ''}
                 ${_findingPills(scan)}
             </div>`;
 
@@ -233,18 +272,18 @@ const Compliance = (() => {
         const cards = devices.map((dev, i) => {
             const statusCls = dev.status === 'collected' ? 'badge-success' : 'badge-error';
             const header = `
-                <div class="device-row-header" onclick="Compliance._toggleDevice('dev-body-${i}')"
+                <div onclick="Compliance._toggleDevice('dev-body-${i}')"
                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:var(--bg-card);border-bottom:1px solid var(--border-light);">
-                    <span style="font-family:monospace;font-weight:600;">${Utils.esc(dev.host)}</span>
-                    <span style="font-size:12px;color:var(--text-secondary);">${Utils.esc(dev.platform || '')} ${dev.version ? '— v' + Utils.esc(dev.version) : ''}</span>
-                    <span class="badge ${statusCls}" style="margin-left:auto;">${Utils.esc(dev.status)}</span>
+                    <span style="font-family:monospace;font-weight:600;">${_esc(dev.host)}</span>
+                    <span style="font-size:12px;color:var(--text-secondary);">${_esc(dev.platform || '')}${dev.version ? ' — v' + _esc(dev.version) : ''}</span>
+                    <span class="badge ${statusCls}" style="margin-left:auto;">${_esc(dev.status)}</span>
                     ${dev.finding_count ? `<span style="font-size:12px;font-weight:600;color:#b91c1c;">${dev.finding_count} finding${dev.finding_count !== 1 ? 's' : ''}</span>` : ''}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" id="dev-chevron-${i}"><path d="M6 9l6 6 6-6"/></svg>
                 </div>`;
 
             let body = '';
             if (dev.error) {
-                body = `<div class="warn-banner" style="margin:12px;">${Utils.esc(dev.error)}</div>`;
+                body = `<div class="warn-banner" style="margin:12px;">${_esc(dev.error)}</div>`;
             } else if (!dev.findings || !dev.findings.length) {
                 body = `<div style="padding:14px 16px;font-size:13px;color:var(--text-secondary);">No vulnerabilities found for this version.</div>`;
             } else {
@@ -252,11 +291,11 @@ const Compliance = (() => {
                     <tr>
                         <td>${_sevBadge(f.severity)}</td>
                         <td style="font-weight:600;font-size:12px;">${f.cvss_score != null ? f.cvss_score.toFixed(1) : '—'}</td>
-                        <td style="font-size:12px;">${Utils.esc(f.advisory_id)}</td>
-                        <td style="font-size:12px;max-width:280px;">${Utils.esc(f.title || '')}</td>
+                        <td style="font-size:12px;">${_esc(f.advisory_id)}</td>
+                        <td style="font-size:12px;max-width:280px;">${_esc(f.title || '')}</td>
                         <td style="font-size:11px;">${(f.cve_list || []).join(', ') || '—'}</td>
                         <td style="font-size:11px;">${(f.first_fixed || []).join(', ') || '—'}</td>
-                        <td>${f.pub_url ? `<a href="${Utils.esc(f.pub_url)}" target="_blank" rel="noreferrer" style="font-size:11px;">Link</a>` : '—'}</td>
+                        <td>${f.pub_url ? `<a href="${_esc(f.pub_url)}" target="_blank" rel="noreferrer" style="font-size:11px;">Link</a>` : '—'}</td>
                     </tr>`).join('');
                 body = `
                     <table style="font-size:12px;">
@@ -300,7 +339,7 @@ const Compliance = (() => {
         openResults,
         downloadCSV,
         _deviceKeydown,
-        _removeChip,
+        _removeDevice,
         _toggleDevice,
     };
 })();
