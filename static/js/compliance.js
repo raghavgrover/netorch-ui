@@ -1,10 +1,7 @@
 /**
  * compliance.js — Vulnerability scan management view.
  *
- * Views:
- *   - Scan list: table of all scans with finding severity pills
- *   - New Scan modal: enter devices/groups, submit
- *   - Results modal: per-device accordion with advisories table, CSV export
+ * API calls return { data, ok, status } — always use res.data.xxx, never res.xxx.
  *
  * Chip-select pattern mirrors runbooks.js exactly:
  *   _devices[] is the source of truth; _renderModalChips() rebuilds the
@@ -16,7 +13,7 @@ const Compliance = (() => {
     // ── State ──────────────────────────────────────────────────────────────
     let _scans         = [];
     let _currentScanId = null;
-    let _devices       = [];   // chip-select state for new scan modal
+    let _devices       = [];
 
     // ── Helpers ─────────────────────────────────────────────────────────────
 
@@ -82,15 +79,16 @@ const Compliance = (() => {
         const body = document.getElementById('comp-scans-body');
         body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:24px 0;"><div class="empty-state-sub">Loading…</div></div></td></tr>`;
 
-        try {
-            const resp = await API.get('/api/compliance/scans?limit=50&offset=0');
-            _scans = resp.scans || [];
-            document.getElementById('comp-scan-count').textContent =
-                `${resp.total || _scans.length} scan${(resp.total !== 1) ? 's' : ''}`;
-            _renderTable();
-        } catch (e) {
-            body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:24px 0;"><div class="empty-state-sub">Error loading scans: ${_esc(String(e))}</div></div></td></tr>`;
+        const res = await API.get('/api/compliance/scans', { limit: 50, offset: 0 });
+        if (!res.ok) {
+            body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:24px 0;"><div class="empty-state-sub">Error loading scans: ${_esc(res.data?.error || 'API error')}</div></div></td></tr>`;
+            return;
         }
+        _scans = res.data.scans || [];
+        const total = res.data.total || _scans.length;
+        document.getElementById('comp-scan-count').textContent =
+            `${total} scan${total !== 1 ? 's' : ''}`;
+        _renderTable();
     }
 
     function _renderTable() {
@@ -135,7 +133,7 @@ const Compliance = (() => {
                 </span>`).join('') +
             `<input type="text" id="comp-scan-device-input"
                 placeholder="${_devices.length ? '' : 'Type group name or IP, press Enter to add…'}"
-                style="border:none;outline:none;font-size:13px;font-family:\'Inter\';flex:1;min-width:160px;background:transparent;padding:2px 4px;"
+                style="border:none;outline:none;font-size:13px;font-family:'Inter';flex:1;min-width:160px;background:transparent;padding:2px 4px;"
                 onkeydown="Compliance._deviceKeydown(event)"
                 autocomplete="off" list="comp-scan-group-datalist">`;
     }
@@ -149,7 +147,6 @@ const Compliance = (() => {
                 _devices.push(val);
                 _renderModalChips();
             }
-            // Focus the re-rendered input
             setTimeout(() => document.getElementById('comp-scan-device-input')?.focus(), 0);
         }
         if (event.key === 'Backspace' && !inp.value && _devices.length) {
@@ -171,19 +168,21 @@ const Compliance = (() => {
         _devices = [];
         _renderModalChips();
 
-        document.getElementById('comp-scan-incident').value     = '';
-        document.getElementById('comp-scan-submit-btn').disabled = false;
-        document.getElementById('comp-scan-submit-btn').textContent = 'Start Scan';
+        document.getElementById('comp-scan-incident').value      = '';
+        const btn = document.getElementById('comp-scan-submit-btn');
+        btn.disabled    = false;
+        btn.textContent = 'Start Scan';
 
         // Populate datalist with inventory groups
-        try {
-            const resp = await API.get('/api/inventory/groups');
+        const res = await API.get('/api/inventory/groups');
+        if (res.ok) {
             const datalist = document.getElementById('comp-scan-group-datalist');
             if (datalist) {
-                const groups = (resp.groups || []);
-                datalist.innerHTML = groups.map(g => `<option value="${_esc(g)}">`).join('');
+                datalist.innerHTML = (res.data.groups || [])
+                    .map(g => `<option value="${_esc(g)}">`)
+                    .join('');
             }
-        } catch (_) { /* groups are optional */ }
+        }
 
         openModal('comp-scan-modal');
         setTimeout(() => document.getElementById('comp-scan-device-input')?.focus(), 50);
@@ -195,7 +194,6 @@ const Compliance = (() => {
         if (inp && inp.value.trim()) {
             const v = inp.value.trim();
             if (!_devices.includes(v)) _devices.push(v);
-            inp.value = '';
         }
 
         const incident = document.getElementById('comp-scan-incident').value.trim();
@@ -209,27 +207,27 @@ const Compliance = (() => {
         btn.disabled    = true;
         btn.textContent = 'Starting…';
 
-        const deviceEntries = _devices.map(d => {
-            // Heuristic: pure IPv4/IPv6 → host; anything else → group
-            if (/^[\d.]+$/.test(d) || /^[0-9a-f:]+$/i.test(d)) {
-                return { host: d };
-            }
-            return { group: d };
+        const deviceEntries = _devices.map(d =>
+            /^[\d.]+$/.test(d) || /^[0-9a-f:]+$/i.test(d)
+                ? { host: d }
+                : { group: d }
+        );
+
+        const res = await API.post('/api/compliance/scans', {
+            devices:  deviceEntries,
+            incident: incident || null,
         });
 
-        try {
-            const resp = await API.post('/api/compliance/scans', {
-                devices:  deviceEntries,
-                incident: incident || null,
-            });
-            closeModal('comp-scan-modal');
-            await refresh();
-            if (resp.scan_id) openResults(resp.scan_id);
-        } catch (e) {
-            alert('Scan submission failed: ' + (e.message || e));
+        if (!res.ok) {
+            alert('Scan submission failed: ' + (res.data?.detail || res.data?.error || `HTTP ${res.status}`));
             btn.disabled    = false;
             btn.textContent = 'Start Scan';
+            return;
         }
+
+        closeModal('comp-scan-modal');
+        await refresh();
+        if (res.data.scan_id) openResults(res.data.scan_id);
     }
 
     // ── Results modal ─────────────────────────────────────────────────────────
@@ -241,16 +239,18 @@ const Compliance = (() => {
             `<div class="empty-state"><div class="empty-state-sub">Loading results…</div></div>`;
         openModal('comp-results-modal');
 
-        try {
-            const [scan, results] = await Promise.all([
-                API.get(`/api/compliance/scans/${scanId}`),
-                API.get(`/api/compliance/scans/${scanId}/results`),
-            ]);
-            _renderResults(scan, results);
-        } catch (e) {
+        const [scanRes, resultsRes] = await Promise.all([
+            API.get(`/api/compliance/scans/${scanId}`),
+            API.get(`/api/compliance/scans/${scanId}/results`),
+        ]);
+
+        if (!scanRes.ok || !resultsRes.ok) {
             document.getElementById('comp-results-body').innerHTML =
-                `<div class="warn-banner">Error loading results: ${_esc(String(e))}</div>`;
+                `<div class="warn-banner">Error loading results: ${_esc(scanRes.data?.error || resultsRes.data?.error || 'API error')}</div>`;
+            return;
         }
+
+        _renderResults(scanRes.data, resultsRes.data);
     }
 
     function _renderResults(scan, results) {
@@ -265,7 +265,7 @@ const Compliance = (() => {
 
         if (!devices.length) {
             document.getElementById('comp-results-body').innerHTML =
-                summary + `<div class="empty-state"><div class="empty-state-sub">No device results yet.</div></div>`;
+                summary + `<div class="empty-state"><div class="empty-state-sub">No device results yet — scan may still be running.</div></div>`;
             return;
         }
 
@@ -344,7 +344,6 @@ const Compliance = (() => {
     };
 })();
 
-// Register with Nav system
 if (typeof Nav !== 'undefined' && Nav.register) {
     Nav.register('compliance', {
         onActivate: () => Compliance.onActivate(),
