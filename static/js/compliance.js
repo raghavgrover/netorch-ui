@@ -25,6 +25,17 @@ const Compliance = (() => {
             .replace(/"/g, '&quot;');
     }
 
+    function _relTime(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        if (isNaN(d)) return iso;
+        const diff = Math.round((Date.now() - d) / 1000);
+        if (diff < 60)  return `${diff}s ago`;
+        if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+        if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
+        return d.toLocaleDateString();
+    }
+
     function _sevBadge(sev) {
         const cls = {
             'Critical':      'sev-critical',
@@ -88,7 +99,11 @@ const Compliance = (() => {
         const total = res.data.total || _scans.length;
         document.getElementById('comp-scan-count').textContent =
             `${total} scan${total !== 1 ? 's' : ''}`;
-        _renderTable();
+        try {
+            _renderTable();
+        } catch (err) {
+            body.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:24px 0;"><div class="empty-state-sub">Render error: ${_esc(String(err))}</div></div></td></tr>`;
+        }
     }
 
     function _renderTable() {
@@ -104,7 +119,7 @@ const Compliance = (() => {
                 <td>${_esc(s.incident || '—')}</td>
                 <td>${s.device_count}</td>
                 <td>${_findingPills(s)}</td>
-                <td>${s.started_at ? Utils.relTime(s.started_at) : '—'}</td>
+                <td>${_relTime(s.started_at)}</td>
                 <td>
                     <button class="btn btn-outline" style="padding:3px 10px;font-size:11px;"
                         onclick="event.stopPropagation();Compliance.openResults('${_esc(s.scan_id)}')">
@@ -226,6 +241,7 @@ const Compliance = (() => {
         }
 
         closeModal('comp-scan-modal');
+        showToast(`Scan ${res.data.scan_id} queued — ${res.data.device_count} device${res.data.device_count !== 1 ? 's' : ''}`, 'success');
         await refresh();
         if (res.data.scan_id) openResults(res.data.scan_id);
     }
