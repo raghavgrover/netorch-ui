@@ -432,6 +432,10 @@ def compliance_get_scan(scan_id: str) -> tuple:
     return _get(f"/compliance/scans/{scan_id}")
 
 
+def compliance_delete_scan(scan_id: str) -> tuple:
+    return _delete(f"/compliance/scans/{scan_id}")
+
+
 def compliance_get_results(scan_id: str) -> tuple:
     return _get(f"/compliance/scans/{scan_id}/results")
 

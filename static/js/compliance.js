@@ -1,11 +1,11 @@
 /**
  * compliance.js — Vulnerability scan management view.
  *
- * API calls return { data, ok, status } — always use res.data.xxx, never res.xxx.
+ * Layout: two panels inside #view-compliance
+ *   #comp-list-panel   — scan table (default view)
+ *   #comp-detail-panel — per-device results (shown on row click)
  *
- * Chip-select pattern mirrors runbooks.js exactly:
- *   _devices[] is the source of truth; _renderModalChips() rebuilds the
- *   container innerHTML (chips + input) on every change.
+ * API calls return { data, ok, status } — always use res.data.xxx, never res.xxx.
  */
 'use strict';
 
@@ -30,7 +30,7 @@ const Compliance = (() => {
         const d = new Date(iso);
         if (isNaN(d)) return iso;
         const diff = Math.round((Date.now() - d) / 1000);
-        if (diff < 60)  return `${diff}s ago`;
+        if (diff < 60)   return `${diff}s ago`;
         if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
         if (diff < 86400) return `${Math.round(diff / 3600)}h ago`;
         return d.toLocaleDateString();
@@ -76,11 +76,27 @@ const Compliance = (() => {
         return `<div class="scan-finding-pills">${parts.join('')}</div>`;
     }
 
+    // ── Panel switching ──────────────────────────────────────────────────────
+
+    function _showList() {
+        document.getElementById('comp-list-panel').style.display  = '';
+        document.getElementById('comp-detail-panel').style.display = 'none';
+    }
+
+    function _showDetail() {
+        document.getElementById('comp-list-panel').style.display  = 'none';
+        document.getElementById('comp-detail-panel').style.display = '';
+    }
+
+    function backToList() {
+        _currentScanId = null;
+        _showList();
+    }
+
     // ── View activation ──────────────────────────────────────────────────────
 
     function onActivate() {
-        document.getElementById('page-title').textContent    = 'Compliance';
-        document.getElementById('page-subtitle').textContent = 'Vulnerability Scanning — Cisco PSIRT';
+        _showList();
         refresh();
     }
 
@@ -97,8 +113,8 @@ const Compliance = (() => {
         }
         _scans = res.data.scans || [];
         const total = res.data.total || _scans.length;
-        document.getElementById('comp-scan-count').textContent =
-            `${total} scan${total !== 1 ? 's' : ''}`;
+        const countEl = document.getElementById('comp-scan-count');
+        if (countEl) countEl.textContent = `${total} scan${total !== 1 ? 's' : ''}`;
         try {
             _renderTable();
         } catch (err) {
@@ -124,6 +140,10 @@ const Compliance = (() => {
                     <button class="btn btn-outline" style="padding:3px 10px;font-size:11px;"
                         onclick="event.stopPropagation();Compliance.openResults('${_esc(s.scan_id)}')">
                         Results
+                    </button>
+                    <button class="btn btn-outline" style="padding:3px 10px;font-size:11px;color:var(--status-red);border-color:var(--status-red);"
+                        onclick="event.stopPropagation();Compliance.deleteScan('${_esc(s.scan_id)}')">
+                        Delete
                     </button>
                 </td>
             </tr>
@@ -183,7 +203,7 @@ const Compliance = (() => {
         _devices = [];
         _renderModalChips();
 
-        document.getElementById('comp-scan-incident').value      = '';
+        document.getElementById('comp-scan-incident').value = '';
         const btn = document.getElementById('comp-scan-submit-btn');
         btn.disabled    = false;
         btn.textContent = 'Start Scan';
@@ -204,7 +224,6 @@ const Compliance = (() => {
     }
 
     async function submitScan() {
-        // Flush any un-confirmed text still in the input
         const inp = document.getElementById('comp-scan-device-input');
         if (inp && inp.value.trim()) {
             const v = inp.value.trim();
@@ -246,14 +265,27 @@ const Compliance = (() => {
         if (res.data.scan_id) openResults(res.data.scan_id);
     }
 
-    // ── Results modal ─────────────────────────────────────────────────────────
+    // ── Delete scan ───────────────────────────────────────────────────────────
+
+    async function deleteScan(scanId) {
+        if (!confirm(`Delete scan ${scanId}?\nThis will permanently remove the scan and all its findings.`)) return;
+        const res = await API.del(`/api/compliance/scans/${scanId}`);
+        if (!res.ok) {
+            showToast('Delete failed: ' + (res.data?.detail || res.data?.error || `HTTP ${res.status}`), 'error');
+            return;
+        }
+        showToast('Scan deleted.', 'success');
+        await refresh();
+    }
+
+    // ── Results detail panel ──────────────────────────────────────────────────
 
     async function openResults(scanId) {
         _currentScanId = scanId;
-        document.getElementById('comp-results-title').textContent = `Scan Results — ${scanId}`;
-        document.getElementById('comp-results-body').innerHTML =
-            `<div class="empty-state"><div class="empty-state-sub">Loading results…</div></div>`;
-        openModal('comp-results-modal');
+        document.getElementById('comp-detail-title').textContent = scanId;
+        document.getElementById('comp-detail-body').innerHTML =
+            `<div class="empty-state" style="padding:40px 0;"><div class="empty-state-sub">Loading results…</div></div>`;
+        _showDetail();
 
         const [scanRes, resultsRes] = await Promise.all([
             API.get(`/api/compliance/scans/${scanId}`),
@@ -261,7 +293,7 @@ const Compliance = (() => {
         ]);
 
         if (!scanRes.ok || !resultsRes.ok) {
-            document.getElementById('comp-results-body').innerHTML =
+            document.getElementById('comp-detail-body').innerHTML =
                 `<div class="warn-banner">Error loading results: ${_esc(scanRes.data?.error || resultsRes.data?.error || 'API error')}</div>`;
             return;
         }
@@ -271,17 +303,21 @@ const Compliance = (() => {
 
     function _renderResults(scan, results) {
         const devices = results.devices || [];
+
         const summary = `
-            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;align-items:center;">
-                <div>${_statusBadge(scan.status)}</div>
-                <div style="font-size:13px;color:var(--text-secondary);">${scan.device_count} device${scan.device_count !== 1 ? 's' : ''}</div>
-                ${scan.incident ? `<div style="font-size:13px;">Incident: <strong>${_esc(scan.incident)}</strong></div>` : ''}
-                ${_findingPills(scan)}
+            <div class="section-card" style="margin-bottom:16px;padding:16px 20px;">
+                <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+                    <div>${_statusBadge(scan.status)}</div>
+                    <div style="font-size:13px;color:var(--text-secondary);">${scan.device_count} device${scan.device_count !== 1 ? 's' : ''}</div>
+                    ${scan.incident ? `<div style="font-size:13px;">Incident: <strong>${_esc(scan.incident)}</strong></div>` : ''}
+                    ${scan.triggered_by ? `<div style="font-size:13px;color:var(--text-secondary);">Triggered by: ${_esc(scan.triggered_by)}</div>` : ''}
+                    <div style="margin-left:auto;">${_findingPills(scan)}</div>
+                </div>
             </div>`;
 
         if (!devices.length) {
-            document.getElementById('comp-results-body').innerHTML =
-                summary + `<div class="empty-state"><div class="empty-state-sub">No device results yet — scan may still be running.</div></div>`;
+            document.getElementById('comp-detail-body').innerHTML =
+                summary + `<div class="empty-state" style="padding:30px 0;"><div class="empty-state-sub">No device results yet — scan may still be running.</div></div>`;
             return;
         }
 
@@ -289,7 +325,7 @@ const Compliance = (() => {
             const statusCls = dev.status === 'collected' ? 'badge-success' : 'badge-error';
             const header = `
                 <div onclick="Compliance._toggleDevice('dev-body-${i}')"
-                    style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:var(--bg-card);border-bottom:1px solid var(--border-light);">
+                    style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:var(--bg-card);border-bottom:1px solid var(--border-light);">
                     <span style="font-family:monospace;font-weight:600;">${_esc(dev.host)}</span>
                     <span style="font-size:12px;color:var(--text-secondary);">${_esc(dev.platform || '')}${dev.version ? ' — v' + _esc(dev.version) : ''}</span>
                     <span class="badge ${statusCls}" style="margin-left:auto;">${_esc(dev.status)}</span>
@@ -315,19 +351,25 @@ const Compliance = (() => {
                     </tr>`).join('');
                 body = `
                     <table style="font-size:12px;">
-                        <thead><tr><th>Severity</th><th>CVSS</th><th>Advisory ID</th><th>Title</th><th>CVEs</th><th>First Fixed</th><th>Advisory</th></tr></thead>
+                        <thead><tr>
+                            <th>Severity</th><th>CVSS</th><th>Advisory ID</th>
+                            <th>Title</th><th>CVEs</th><th>First Fixed</th><th>Advisory</th>
+                        </tr></thead>
                         <tbody>${rows}</tbody>
                     </table>`;
             }
 
             return `
-                <div class="device-row" style="margin-bottom:8px;">
+                <div class="device-row" style="margin-bottom:8px;border:1px solid var(--border-light);border-radius:6px;overflow:hidden;">
                     ${header}
                     <div id="dev-body-${i}" style="display:none;">${body}</div>
                 </div>`;
         }).join('');
 
-        document.getElementById('comp-results-body').innerHTML = summary + cards;
+        document.getElementById('comp-detail-body').innerHTML = summary + cards;
+
+        // Auto-expand first device
+        if (devices.length === 1) _toggleDevice('dev-body-0');
     }
 
     function _toggleDevice(bodyId) {
@@ -350,8 +392,10 @@ const Compliance = (() => {
     return {
         onActivate,
         refresh,
+        backToList,
         openNewScan,
         submitScan,
+        deleteScan,
         openResults,
         downloadCSV,
         _deviceKeydown,
@@ -359,9 +403,3 @@ const Compliance = (() => {
         _toggleDevice,
     };
 })();
-
-if (typeof Nav !== 'undefined' && Nav.register) {
-    Nav.register('compliance', {
-        onActivate: () => Compliance.onActivate(),
-    });
-}

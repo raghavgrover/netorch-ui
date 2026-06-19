@@ -165,6 +165,12 @@ def api_compliance_get_scan(scan_id: str):
     return jsonify(data), status
 
 
+@app.route("/api/compliance/scans/<scan_id>", methods=["DELETE"])
+def api_compliance_delete_scan(scan_id: str):
+    data, status = nc.compliance_delete_scan(scan_id)
+    return jsonify(data), status
+
+
 @app.route("/api/compliance/scans/<scan_id>/results")
 def api_compliance_get_results(scan_id: str):
     data, status = nc.compliance_get_results(scan_id)

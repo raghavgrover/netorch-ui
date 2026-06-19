@@ -13,8 +13,9 @@ const Nav = (() => {
         newjob:    { title: 'New Job',     subtitle: 'Submit a new job on target devices' },
         jobdetail: { title: 'Job Detail',  subtitle: 'Per-device results and live log stream' },
         runbooks:  { title: 'Runbooks',    subtitle: 'Execute predefined command runbooks on devices' },
-        workflows: { title: 'Workflows',   subtitle: 'YAML-defined multi-step orchestration' },
-        discovery: { title: 'Discovery',   subtitle: 'BigFix Asset Discovery — unmanaged network devices' },
+        workflows:   { title: 'Workflows',   subtitle: 'YAML-defined multi-step orchestration' },
+        discovery:   { title: 'Discovery',   subtitle: 'BigFix Asset Discovery — unmanaged network devices' },
+        compliance:  { title: 'Compliance',  subtitle: 'Vulnerability Scanning — Cisco PSIRT' },
     };
 
     const history  = [];
@@ -108,7 +109,8 @@ const Nav = (() => {
         if (view === 'newjob')    NewJob.onEnter();
         if (view === 'runbooks')  Runbooks.load();
         if (view === 'workflows') Workflows.load();
-        if (view === 'discovery') Discovery.load();
+        if (view === 'discovery')  Discovery.load();
+        if (view === 'compliance') Compliance.onActivate();
     }
 
     return { go, back, fwd };

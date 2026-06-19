@@ -367,32 +367,53 @@
 
         <!-- ════ COMPLIANCE ════ -->
         <div id="view-compliance" class="view-section">
-            <div class="grid-toolbar">
-                <div class="grid-toolbar-left">
-                    <span id="comp-scan-count"></span>
+
+            <!-- ── Scan list panel ── -->
+            <div id="comp-list-panel">
+                <div class="grid-toolbar">
+                    <div class="grid-toolbar-left">
+                        <span id="comp-scan-count"></span>
+                    </div>
+                    <div class="grid-toolbar-right">
+                        <button class="btn btn-outline" onclick="Compliance.refresh()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh
+                        </button>
+                        <button class="btn btn-primary" onclick="Compliance.openNewScan()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Scan
+                        </button>
+                    </div>
                 </div>
-                <div class="grid-toolbar-right">
-                    <button class="btn btn-outline" onclick="Compliance.refresh()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh
-                    </button>
-                    <button class="btn btn-primary" onclick="Compliance.openNewScan()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Scan
-                    </button>
+                <div class="section-card" style="padding:0;overflow:hidden;margin-bottom:24px;">
+                    <table>
+                        <thead><tr>
+                            <th>Scan ID</th><th>Status</th><th>Incident</th>
+                            <th>Devices</th><th>Findings</th><th>Started</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody id="comp-scans-body"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Scans table -->
-            <div class="section-card" style="padding:0;overflow:hidden;margin-bottom:24px;">
-                <table>
-                    <thead><tr>
-                        <th>Scan ID</th><th>Status</th><th>Incident</th>
-                        <th>Devices</th><th>Findings</th><th>Started</th><th>Actions</th>
-                    </tr></thead>
-                    <tbody id="comp-scans-body">
-                        <tr><td colspan="7"><div class="empty-state" style="padding:30px 0;"><div class="empty-state-sub">Loading…</div></div></td></tr>
-                    </tbody>
-                </table>
+            <!-- ── Scan detail panel (shown when a scan is selected) ── -->
+            <div id="comp-detail-panel" style="display:none;">
+                <div class="grid-toolbar">
+                    <div class="grid-toolbar-left">
+                        <button class="btn btn-outline" onclick="Compliance.backToList()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                            Back to Scans
+                        </button>
+                        <span id="comp-detail-title" style="font-size:13px;color:var(--text-secondary);margin-left:12px;font-family:monospace;"></span>
+                    </div>
+                    <div class="grid-toolbar-right">
+                        <button class="btn btn-outline" onclick="Compliance.downloadCSV()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export CSV
+                        </button>
+                    </div>
+                </div>
+                <div id="comp-detail-body" style="margin-bottom:24px;"></div>
             </div>
+
         </div>
 
     </main>
@@ -1098,26 +1119,6 @@
     </div>
 </div>
 
-<!-- ════ COMPLIANCE: SCAN RESULTS MODAL ════ -->
-<div class="modal-overlay" id="comp-results-modal" onclick="closeModal('comp-results-modal')">
-    <div class="modal modal-xl" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <div class="modal-title" id="comp-results-title">Scan Results</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button class="btn btn-outline" id="comp-csv-btn" onclick="Compliance.downloadCSV()" style="padding:5px 12px;font-size:12px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    Export CSV
-                </button>
-                <button class="modal-close" onclick="closeModal('comp-results-modal')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-            </div>
-        </div>
-        <div class="modal-body" id="comp-results-body" style="max-height:70vh;overflow-y:auto;">
-            <div class="empty-state"><div class="empty-state-sub">Loading results…</div></div>
-        </div>
-    </div>
-</div>
 
 <!-- ═══════════════════════════ JAVASCRIPT ═══════════════════════════ -->
 <script src="/static/js/utils.js"></script>
