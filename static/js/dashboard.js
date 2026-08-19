@@ -39,6 +39,28 @@ const Dashboard = (() => {
         _renderKpis(srcRes, jobsRes, groupsRes);
         _renderJobs(jobsRes);
         _renderPlatforms(srcRes);
+        _renderBusyKpi();
+    }
+
+    /** "Devices In Use" tile — reservations held by currently running jobs. */
+    async function _renderBusyKpi() {
+        const card = $id('kpi-busy-card');
+        const val  = $id('kpi-busy');
+        if (!val) return;
+        await Busy.refresh(true);
+        if (!Busy.enabled()) {
+            val.textContent = '—';
+            if (card) card.title = 'Device locking is disabled ([locking] enabled = false)';
+            return;
+        }
+        const n = Busy.count();
+        val.textContent = fmtNum(n);
+        if (card) {
+            card.title = n
+                ? Busy.all().map(r => `${r.host} — ${Busy.describe(r)}`).join('\n')
+                : 'No devices are currently reserved';
+            card.onclick = () => Nav.go('hosts');
+        }
     }
 
     function _renderKpis(srcRes, jobsRes, groupsRes) {

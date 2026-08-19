@@ -15,6 +15,7 @@ import json
 import logging
 import time
 from typing import Any, Generator
+from urllib.parse import quote
 
 import requests
 from cachetools import TTLCache
@@ -118,6 +119,11 @@ def _delete_with_body(path: str, body: dict) -> tuple[Any, int]:
 
 def health() -> tuple[Any, int]:
     return _get("/health")
+
+
+def inventory_group_hosts(group: str) -> tuple[Any, int]:
+    """Hosts belonging to one inventory group (used to resolve group chips)."""
+    return _get(f"/inventory/groups/{quote(group, safe='')}")
 
 
 def devices_busy() -> tuple[Any, int]:

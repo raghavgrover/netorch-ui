@@ -270,6 +270,32 @@ h1, h2, h3, h4,
 .b-purple { background: var(--status-purple-bg); color: var(--status-purple); }
 .b-grey   { background: #f1f5f9; color: var(--text-secondary); }
 
+/* Device currently reserved by a running job (see docs/device-locking.md) */
+.badge-busy {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fdba74;
+    white-space: nowrap;
+    cursor: help;
+}
+.badge-busy::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #ea580c;
+}
+
 /* ── Platform badges ─────────────────────────────────────── */
 .plat-badge {
     display: inline-flex;

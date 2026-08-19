@@ -145,6 +145,13 @@ def api_health():
     return jsonify(data), status
 
 
+@app.route("/api/inventory/groups/<path:group>")
+def api_inventory_group_hosts(group: str):
+    """Members of one inventory group — used to flag busy hosts inside a group."""
+    data, status = nc.inventory_group_hosts(group)
+    return jsonify(data), status
+
+
 @app.route("/api/devices/busy")
 def api_devices_busy():
     """Devices currently reserved by a running job (live — never cached)."""

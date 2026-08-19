@@ -28,12 +28,89 @@ const NewJob = (() => {
     // Workflow mode state  ← NEW
     let _wfParams = [];       // [{key, value, hint}]
 
+    // Pre-flight device-reservation state: chip label -> {tip}
+    let _busyChips  = {};
+    let _busyTimer  = null;
+    const BUSY_POLL_MS = 15000;
+
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
     function onEnter() {
         _loadGroupsDatalist();
         _updateCommandsRequired();
         setMode(_mode);
+        _refreshBusy();
+        _startBusyPolling();
+    }
+
+    // ── Pre-flight: which targets are already in use? ─────────────────────────
+
+    function _startBusyPolling() {
+        if (_busyTimer) return;
+        _busyTimer = setInterval(() => {
+            // Stop polling once the operator has navigated away.
+            if (!$id('view-newjob')?.classList.contains('active')) {
+                clearInterval(_busyTimer);
+                _busyTimer = null;
+                return;
+            }
+            _refreshBusy();
+        }, BUSY_POLL_MS);
+    }
+
+    /**
+     * Resolve the current chips against live reservations, flag the chips and
+     * render an inline warning. Purely advisory — the authoritative check is
+     * the atomic claim the backend performs at submit time.
+     */
+    async function _refreshBusy() {
+        const banner = $id('busy-preflight');
+        if (!_devices.length) {
+            _busyChips = {};
+            if (banner) banner.style.display = 'none';
+            return;
+        }
+
+        let hits = [];
+        try {
+            hits = await Busy.resolveChips(_devices);
+        } catch (_) {
+            return;   // advisory only — never block the form on a lookup failure
+        }
+
+        const next = {};
+        hits.forEach(h => {
+            const tip = h.viaGroup
+                ? `${h.host}: ${Busy.describe(h.reservation)}`
+                : Busy.describe(h.reservation);
+            if (!next[h.chip]) next[h.chip] = { tip, hosts: [] };
+            next[h.chip].hosts.push(h.host);
+        });
+        _busyChips = next;
+        _renderChips();
+
+        if (!banner) return;
+        if (!hits.length) { banner.style.display = 'none'; banner.innerHTML = ''; return; }
+
+        const uniqueHosts = [...new Set(hits.map(h => h.host))];
+        const list = uniqueHosts.slice(0, 6).map(h => {
+            const r = Busy.get(h);
+            const by = r && r.operator ? ` (${escHtml(r.operator)})` : '';
+            const jb = r && r.job_id
+                ? ` — <a href="/jobs/${encodeURIComponent(r.job_id)}" style="color:inherit;text-decoration:underline;">${escHtml(r.job_id)}</a>`
+                : '';
+            return `<li style="margin-top:2px;"><code>${escHtml(h)}</code>${by}${jb}</li>`;
+        }).join('');
+        const more = uniqueHosts.length > 6
+            ? `<li style="margin-top:2px;">…and ${uniqueHosts.length - 6} more</li>` : '';
+
+        banner.innerHTML = `
+            <div style="background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:6px;padding:10px 12px;font-size:12px;">
+                <strong>${uniqueHosts.length} target device${uniqueHosts.length !== 1 ? 's are' : ' is'} currently in use.</strong>
+                Submitting now will be rejected for ${uniqueHosts.length !== 1 ? 'those devices' : 'that device'}.
+                <ul style="margin:6px 0 0 16px;padding:0;">${list}${more}</ul>
+            </div>`;
+        banner.style.display = 'block';
     }
 
     // ── Mode ──────────────────────────────────────────────────────────────────
@@ -232,27 +309,42 @@ const NewJob = (() => {
             if (val && !_devices.includes(val)) {
                 _devices.push(val);
                 _renderChips();
+                _refreshBusy();
             }
             inp.value = '';
         }
         if (event.key === 'Backspace' && !inp.value && _devices.length) {
             _devices.pop();
             _renderChips();
+            _refreshBusy();
         }
     }
 
     function _renderChips() {
         const container = $id('device-chips');
         container.innerHTML =
-            _devices.map((d, i) => `
-                <span style="background:#eff6ff;color:var(--hcl-blue);border:1px solid #bfdbfe;border-radius:4px;padding:3px 8px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:5px;">
-                    ${escHtml(d)}
+            _devices.map((d, i) => {
+                // _busyChips is refreshed asynchronously; a chip is flagged when
+                // it is itself reserved, or contains a reserved host.
+                const hit  = _busyChips[d];
+                const busy = !!hit;
+                const style = busy
+                    ? 'background:#fff7ed;color:#9a3412;border:1px solid #fdba74;'
+                    : 'background:#eff6ff;color:var(--hcl-blue);border:1px solid #bfdbfe;';
+                const tip = busy ? ` title="${escHtml(hit.tip)}"` : '';
+                const dot = busy
+                    ? '<span style="width:6px;height:6px;border-radius:50%;background:#ea580c;flex-shrink:0;"></span>'
+                    : '';
+                return `
+                <span${tip} style="${style}border-radius:4px;padding:3px 8px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:5px;">
+                    ${dot}${escHtml(d)}
                     <span style="cursor:pointer;opacity:0.6;display:flex;" onclick="NewJob.removeDevice(${i})">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11">
                             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                         </svg>
                     </span>
-                </span>`).join('') +
+                </span>`;
+            }).join('') +
             `<input type="text" id="device-input"
                 placeholder="${_devices.length ? '' : 'Type group name or IP, press Enter to add…'}"
                 style="border:none;outline:none;font-size:13px;font-family:'Inter';flex:1;min-width:160px;background:transparent;padding:2px 4px;"
@@ -263,12 +355,15 @@ const NewJob = (() => {
     function removeDevice(i) {
         _devices.splice(i, 1);
         _renderChips();
+        _refreshBusy();
         $id('device-input')?.focus();
     }
 
     function clearDevices() {
         _devices = [];
+        _busyChips = {};
         _renderChips();
+        _refreshBusy();
     }
 
     async function loadGroupsDropdown() {
@@ -277,7 +372,7 @@ const NewJob = (() => {
         const groups = res.data.groups || res.data || [];
         let added = 0;
         groups.forEach(g => { if (!_devices.includes(g)) { _devices.push(g); added++; } });
-        if (added) { _renderChips(); showToast(`Added ${added} group${added !== 1 ? 's' : ''}`, 'success'); }
+        if (added) { _renderChips(); _refreshBusy(); showToast(`Added ${added} group${added !== 1 ? 's' : ''}`, 'success'); }
         else showToast('All groups already added', 'info');
     }
 
@@ -292,6 +387,7 @@ const NewJob = (() => {
     function prefillHost(host) {
         if (!_devices.includes(host)) _devices.push(host);
         _renderChips();
+        _refreshBusy();
     }
 
     // ── File Transfers ────────────────────────────────────────────────────────

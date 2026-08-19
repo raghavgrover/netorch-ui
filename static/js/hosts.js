@@ -16,6 +16,22 @@ const Hosts = (() => {
     let _group    = '';
     let _drawerHost = null;
     let _selected = new Set();   // IPs of checked rows
+    let _lastHosts = null;       // last rendered page, for async badge painting
+
+    /** Amber "In use" chip for a device currently reserved by a job. */
+    function _busyBadge(host) {
+        const r = Busy.get(host);
+        if (!r) return '';
+        return `<span class="badge-busy" title="${escHtml(Busy.describe(r))}">in use</span>`;
+    }
+
+    /** Re-paint badges after reservation state arrives (no full re-render). */
+    function _paintBusyBadges(hosts) {
+        hosts.forEach(h => {
+            const cell = document.querySelector(`[data-busy-cell="${CSS.escape(h.host)}"]`);
+            if (cell) cell.innerHTML = _busyBadge(h.host);
+        });
+    }
 
     // Debounced search so we don't hammer /api/hosts on every keystroke
     const _debouncedLoad = debounce(_fetchAndRender, 350);
@@ -123,6 +139,13 @@ const Hosts = (() => {
             return;
         }
 
+        // Reservation state is fetched alongside the page; re-render once it
+        // arrives so the badges appear without blocking the table.
+        Busy.refresh().then(() => {
+            if (_lastHosts === hosts) _paintBusyBadges(hosts);
+        });
+        _lastHosts = hosts;
+
         tbody.innerHTML = hosts.map(h => {
             const groups  = Array.isArray(h.groups) ? h.groups : (h.group ? [h.group] : []);
             const checked = _selected.has(h.host) ? 'checked' : '';
@@ -130,7 +153,10 @@ const Hosts = (() => {
             <tr class="${_selected.has(h.host) ? 'row-selected' : ''}">
                 <td><input type="checkbox" ${checked}
                     onchange="Hosts._toggleRow('${escHtml(h.host)}', this.checked)"></td>
-                <td><span class="cell-link" onclick="Hosts.openDrawer('${escHtml(h.host)}')">${escHtml(h.host)}</span></td>
+                <td>
+                    <span class="cell-link" onclick="Hosts.openDrawer('${escHtml(h.host)}')">${escHtml(h.host)}</span>
+                    <span data-busy-cell="${escHtml(h.host)}">${_busyBadge(h.host)}</span>
+                </td>
                 <td>${platBadge(h.platform)}</td>
                 <td><span style="font-size:12px;color:var(--text-secondary);">${escHtml(groups.join(', '))}</span></td>
                 <td style="font-size:12px;">${h.port || 22}</td>
