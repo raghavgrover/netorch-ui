@@ -464,6 +464,38 @@
 <!-- Toast container -->
 
 <!-- ════ DISCOVERY DUPLICATE-HOST WARNING MODAL ════ -->
+<!-- ════ DEVICE BUSY (CONCURRENCY CONFLICT) MODAL ════ -->
+<div class="modal-overlay" id="modal-device-busy" onclick="event.stopPropagation()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title">Devices In Use</div>
+            <button class="modal-close" onclick="closeModal('modal-device-busy')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" width="24" height="24" style="flex-shrink:0;margin-top:2px;">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <div>
+                    <p id="busy-summary" style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:4px;"></p>
+                    <p style="font-size:13px;color:var(--text-secondary);">
+                        Your job was <strong>not</strong> submitted. Running it now could interleave with
+                        the job already on these devices.
+                    </p>
+                </div>
+            </div>
+            <div id="busy-list" style="font-size:12px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('modal-device-busy')">Cancel</button>
+            <button class="btn btn-primary" id="busy-retry-btn">Retry Now</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modal-discovery-warn" onclick="event.stopPropagation()">
     <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;">
         <div class="modal-header">

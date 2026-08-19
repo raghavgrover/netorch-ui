@@ -416,11 +416,14 @@ const NewJob = (() => {
             showToast(`Job ${jobId} submitted`, 'success');
             reset();
             jobId ? Jobs.openDetail(jobId) : Nav.go('jobs');
+        } else if (isDeviceBusy(res)) {
+            showDeviceBusyModal(res.data.detail, submit);
         } else {
             let err = res.data?.detail || res.data?.error || res.data?.message;
             if (!err && res.status === 0) err = 'Cannot reach netorch API — is it running?';
             if (!err && res.status >= 500) err = `Server error (HTTP ${res.status}) — check journalctl -u netorch`;
             if (!err) err = JSON.stringify(res.data);
+            if (typeof err !== 'string') err = JSON.stringify(err);
             showToast(`Submit failed: ${err}`, 'error');
         }
     }
@@ -459,8 +462,11 @@ const NewJob = (() => {
             showToast(`Runbook job ${jobId} submitted`, 'success');
             reset();
             jobId ? Jobs.openDetail(jobId) : Nav.go('jobs');
+        } else if (isDeviceBusy(res)) {
+            showDeviceBusyModal(res.data.detail, submit);
         } else {
-            const err = res.data?.detail || res.data?.error || JSON.stringify(res.data);
+            let err = res.data?.detail || res.data?.error || JSON.stringify(res.data);
+            if (typeof err !== 'string') err = JSON.stringify(err);
             showToast(`Submit failed: ${err}`, 'error');
         }
     }
@@ -507,8 +513,11 @@ const NewJob = (() => {
             showToast(`Workflow job ${jobId} submitted`, 'success');
             reset();
             jobId ? Jobs.openDetail(jobId) : Nav.go('jobs');
+        } else if (isDeviceBusy(res)) {
+            showDeviceBusyModal(res.data.detail, submit);
         } else {
-            const err = res.data?.detail || res.data?.error || JSON.stringify(res.data);
+            let err = res.data?.detail || res.data?.error || JSON.stringify(res.data);
+            if (typeof err !== 'string') err = JSON.stringify(err);
             showToast(`Submit failed: ${err}`, 'error');
         }
     }

@@ -145,6 +145,13 @@ def api_health():
     return jsonify(data), status
 
 
+@app.route("/api/devices/busy")
+def api_devices_busy():
+    """Devices currently reserved by a running job (live — never cached)."""
+    data, status = nc.devices_busy()
+    return jsonify(data), status
+
+
 # ─── API proxy: Inventory ─────────────────────────────────────────────────────
 
 @app.route("/api/inventory/sources")

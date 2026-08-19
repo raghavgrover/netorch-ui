@@ -120,6 +120,14 @@ def health() -> tuple[Any, int]:
     return _get("/health")
 
 
+def devices_busy() -> tuple[Any, int]:
+    """
+    Current device reservations. Deliberately NOT cached — lock state changes
+    constantly and a stale 'free' answer would defeat the purpose.
+    """
+    return _get("/devices/busy")
+
+
 # ─── Inventory ───────────────────────────────────────────────────────────────
 
 def inventory_sources() -> tuple[Any, int]:
